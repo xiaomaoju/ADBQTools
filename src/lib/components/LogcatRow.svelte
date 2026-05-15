@@ -2,6 +2,7 @@
   import type { LogEntry } from '../types';
 
   export let entry: LogEntry;
+  export let wrap: boolean = false;
 
   const levelColors: Record<string, string> = {
     verbose: 'var(--log-verbose)',
@@ -26,7 +27,7 @@
   }
 </script>
 
-<div class="log-row" style="color: {levelColors[entry.level]}">
+<div class="log-row" class:wrap style="color: {levelColors[entry.level]}">
   <span class="timestamp">{entry.timestamp}</span>
   <span class="pid">{entry.pid}</span>
   <span class="level">{levelLetters[entry.level]}</span>
@@ -72,5 +73,14 @@
     flex: 1;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+  .log-row.wrap {
+    white-space: normal;
+    word-break: break-all;
+  }
+  .log-row.wrap .message {
+    overflow: visible;
+    text-overflow: unset;
+    word-break: break-all;
   }
 </style>

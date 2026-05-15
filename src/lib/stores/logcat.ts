@@ -12,6 +12,7 @@ export const filterPid = writable<number | null>(null);
 export const unityMode = writable<boolean>(false);
 export const autoScroll = writable<boolean>(true);
 export const isPaused = writable<boolean>(false);
+export const wordWrap = writable<boolean>(false);
 
 const UNITY_TAGS = ['Unity', 'Il2Cpp', 'Mono', 'CRASH'];
 const LOG_LEVEL_ORDER: LogLevel[] = ['verbose', 'debug', 'info', 'warn', 'error', 'fatal'];

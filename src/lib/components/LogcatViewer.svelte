@@ -4,7 +4,7 @@
   import LogcatFilterBar from './LogcatFilterBar.svelte';
   import StackGroup from './StackGroup.svelte';
   import Tabs from './ui/Tabs.svelte';
-  import { logEntries, addLogEntries, clearLogEntries, getFilteredEntries, autoScroll, isPaused } from '../stores/logcat';
+  import { logEntries, addLogEntries, clearLogEntries, getFilteredEntries, autoScroll, isPaused, wordWrap } from '../stores/logcat';
   import { devices, activeDeviceSerial } from '../stores/devices';
   import { startLogcat, stopLogcat, pauseLogcat, resumeLogcat, clearLogcat, onLogcat } from '../utils/tauri';
   import type { LogEntry } from '../types';
@@ -118,18 +118,28 @@
 
   <div
     class="log-container"
+    class:wrap-mode={$wordWrap}
     bind:this={container}
     on:scroll={handleScroll}
   >
-    <div class="log-scroll-spacer" style="height: {totalHeight}px">
-      <div class="log-visible" style="transform: translateY({startIndex * ROW_HEIGHT}px)">
-        {#each visibleEntries as entry (entry.id)}
-          <LogcatRow {entry} />
+    <div class="log-scroll-spacer" style="height: {$wordWrap ? 'auto' : totalHeight + 'px'}">
+      {#if $wordWrap}
+        {#each filtered as entry (entry.id)}
+          <LogcatRow {entry} wrap={true} />
           {#if entry.stack_frames && entry.stack_frames.length > 0}
             <StackGroup frames={entry.stack_frames} />
           {/if}
         {/each}
-      </div>
+      {:else}
+        <div class="log-visible" style="transform: translateY({startIndex * ROW_HEIGHT}px)">
+          {#each visibleEntries as entry (entry.id)}
+            <LogcatRow {entry} wrap={false} />
+            {#if entry.stack_frames && entry.stack_frames.length > 0}
+              <StackGroup frames={entry.stack_frames} />
+            {/if}
+          {/each}
+        </div>
+      {/if}
     </div>
   </div>
 
@@ -151,11 +161,14 @@
   .log-container {
     flex: 1;
     overflow-y: auto;
-    overflow-x: hidden;
+    overflow-x: auto;
     background: var(--bg-primary);
   }
-  .log-scroll-spacer { position: relative; }
-  .log-visible { position: absolute; top: 0; left: 0; right: 0; }
+  .log-container.wrap-mode {
+    overflow-x: hidden;
+  }
+  .log-scroll-spacer { position: relative; min-width: fit-content; }
+  .log-visible { position: absolute; top: 0; left: 0; min-width: fit-content; }
   .empty-filter {
     position: absolute;
     top: 50%;

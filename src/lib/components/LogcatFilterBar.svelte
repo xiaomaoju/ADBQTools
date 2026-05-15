@@ -2,7 +2,7 @@
   import Button from './ui/Button.svelte';
   import Input from './ui/Input.svelte';
   import Select from './ui/Select.svelte';
-  import { filterLevel, filterSearch, filterSearchRegex, unityMode, autoScroll, isPaused } from '../stores/logcat';
+  import { filterLevel, filterSearch, filterSearchRegex, unityMode, autoScroll, isPaused, wordWrap } from '../stores/logcat';
   import type { LogLevel } from '../types';
 
   export let onClear: () => void = () => {};
@@ -46,6 +46,9 @@
   <div class="filter-actions">
     <Button size="sm" variant="ghost" on:click={onPauseToggle}>
       {$isPaused ? '▶ Resume' : '⏸ Pause'}
+    </Button>
+    <Button size="sm" variant="ghost" active={$wordWrap} on:click={() => $wordWrap = !$wordWrap}>
+      Wrap
     </Button>
     <Button size="sm" variant="ghost" active={$autoScroll} on:click={() => $autoScroll = !$autoScroll}>
       Auto-scroll

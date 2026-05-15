@@ -29,6 +29,8 @@
     height: var(--toolbar-height);
     padding: 0 12px;
     gap: 8px;
+    flex: 1;
+    min-width: 0;
   }
   .toolbar-left { display: flex; gap: 4px; }
   .toolbar-center { flex: 1; text-align: center; }

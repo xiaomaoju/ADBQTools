@@ -44,23 +44,19 @@
 </script>
 
 <main class="app-shell">
-  <div class="sidebar">
+  <div class="topbar">
     <DevicePanel onWifiClick={() => showWifiDialog = true} />
+    <Toolbar bind:currentView />
   </div>
-  <div class="content">
-    <div class="toolbar-area">
-      <Toolbar bind:currentView />
-    </div>
-    <div class="main-area">
-      {#if currentView === 'logcat'}
-        <LogcatViewer />
-      {:else}
-        <Installer />
-      {/if}
-    </div>
-    <div class="statusbar-area">
-      <StatusBar />
-    </div>
+  <div class="main-area">
+    {#if currentView === 'logcat'}
+      <LogcatViewer />
+    {:else}
+      <Installer />
+    {/if}
+  </div>
+  <div class="statusbar-area">
+    <StatusBar />
   </div>
 </main>
 
@@ -69,29 +65,22 @@
 <style>
   .app-shell {
     display: flex;
+    flex-direction: column;
     height: 100vh;
     width: 100vw;
   }
-  .sidebar {
-    width: var(--sidebar-width);
-    min-width: var(--sidebar-width);
-    background: var(--bg-secondary);
-    border-right: 1px solid var(--border-color);
-  }
-  .content {
-    flex: 1;
+  .topbar {
     display: flex;
-    flex-direction: column;
-    min-width: 0;
-  }
-  .toolbar-area {
+    align-items: center;
     background: var(--bg-secondary);
     border-bottom: 1px solid var(--border-color);
+    min-height: 0;
   }
   .main-area {
     flex: 1;
     overflow: hidden;
     position: relative;
+    min-height: 0;
   }
   .statusbar-area {
     height: var(--statusbar-height);
@@ -100,5 +89,6 @@
     display: flex;
     align-items: center;
     padding: 0 12px;
+    flex-shrink: 0;
   }
 </style>
