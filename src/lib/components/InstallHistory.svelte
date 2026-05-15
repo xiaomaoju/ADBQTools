@@ -11,7 +11,7 @@
   <div class="history-list">
     {#each $installHistory as record (record.id)}
       <div class="history-item">
-        <span class="result-dot" class:success={record.result === 'success'} class:failed={record.result === 'failed'} />
+        <span class="result-dot" class:success={record.result === 'success'} class:failed={record.result === 'failed'}></span>
         <div class="history-info">
           <span class="history-name">{record.filename}</span>
           <span class="history-meta">{record.device_model} · {formatTime(record.timestamp)}</span>

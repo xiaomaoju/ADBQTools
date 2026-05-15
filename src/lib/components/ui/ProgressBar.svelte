@@ -5,9 +5,9 @@
 
 <div class="progress-track">
   {#if indeterminate}
-    <div class="progress-bar indeterminate" />
+    <div class="progress-bar indeterminate"></div>
   {:else}
-    <div class="progress-bar" style="width: {Math.min(100, Math.max(0, progress))}%" />
+    <div class="progress-bar" style="width: {Math.min(100, Math.max(0, progress))}%"></div>
   {/if}
 </div>
 

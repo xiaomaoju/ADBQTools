@@ -35,7 +35,7 @@
         class:active={$activeDeviceSerial === device.serial}
         on:click={() => selectDevice(device.serial)}
       >
-        <span class="status-dot" style="background: {statusColor(device)}" />
+        <span class="status-dot" style="background: {statusColor(device)}"></span>
         <div class="device-info">
           <span class="device-model">{device.model || device.serial}</span>
           <span class="device-serial">{transportIcon(device)} {device.serial}</span>
