@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use tokio::sync::Mutex;
-use tokio::io::{AsyncBufReadExt, BufReader};
+use tokio::io::{AsyncBufReadExt, BufReader, AsyncReadExt};
 use tokio::process::Command;
 use tauri::{AppHandle, Emitter};
 use crate::unity_parser;
@@ -167,21 +167,27 @@ impl LogcatSession {
             };
 
             let stdout = child.stdout.take().unwrap();
-            let mut reader = BufReader::new(stdout).lines();
+            let mut reader = BufReader::new(stdout);
+            let mut raw_buf: Vec<u8> = Vec::with_capacity(4096);
             let mut batch: Vec<LogEntry> = Vec::with_capacity(50);
             let mut last_flush = tokio::time::Instant::now();
             let event_name = format!("logcat-{}", serial);
 
             while running.load(Ordering::Relaxed) {
+                raw_buf.clear();
                 let timeout = tokio::time::timeout(
                     std::time::Duration::from_millis(100),
-                    reader.next_line(),
+                    reader.read_until(b'\n', &mut raw_buf),
                 );
 
                 match timeout.await {
-                    Ok(Ok(Some(line))) => {
+                    Ok(Ok(0)) => break, // EOF
+                    Ok(Ok(_n)) => {
+                        // Use lossy conversion to handle non-UTF-8 bytes (e.g. GBK on Chinese devices)
+                        let line = String::from_utf8_lossy(&raw_buf);
+                        let line = line.trim_end_matches('\n').trim_end_matches('\r');
                         let id = id_counter.fetch_add(1, Ordering::Relaxed);
-                        if let Some(mut entry) = parse_logcat_line(&line, id) {
+                        if let Some(mut entry) = parse_logcat_line(line, id) {
                             if entry.source != LogSource::System {
                                 entry.unity_script_info = unity_parser::extract_script_info(&entry.message);
                             }
@@ -197,7 +203,6 @@ impl LogcatSession {
                             }
                         }
                     }
-                    Ok(Ok(None)) => break,
                     Ok(Err(_)) => break,
                     Err(_) => {} // timeout, check flush
                 }
