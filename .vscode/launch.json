@@ -2,17 +2,19 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Tauri: Debug",
+      "name": "Tauri: Dev",
       "type": "lldb",
       "request": "launch",
+      "cargo": {
+        "args": ["build", "--manifest-path=src-tauri/Cargo.toml"]
+      },
       "program": "${workspaceFolder}/src-tauri/target/debug/androidqtools",
-      "args": [],
       "cwd": "${workspaceFolder}/src-tauri",
       "env": {
         "RUST_LOG": "info",
         "RUST_BACKTRACE": "1"
       },
-      "preLaunchTask": "tauri:build-debug",
+      "preLaunchTask": "frontend:dev",
       "sourceLanguages": ["rust"]
     },
     {
@@ -27,7 +29,7 @@
       "type": "lldb",
       "request": "launch",
       "cargo": {
-        "args": ["test", "--no-run", "--lib"],
+        "args": ["test", "--no-run", "--lib", "--manifest-path=src-tauri/Cargo.toml"],
         "filter": {
           "name": "tauri-app-lib",
           "kind": "lib"
