@@ -22,7 +22,7 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .setup(|app| {
-            let resource_dir = app
+            let mut resource_dir = app
                 .path()
                 .resource_dir()
                 .expect("failed to get resource dir");
@@ -33,7 +33,17 @@ fn main() {
 
             std::fs::create_dir_all(&data_dir).ok();
 
-            let resources = embedded::EmbeddedResources::new(resource_dir, data_dir.clone());
+            // Dev mode: resource_dir points to target/debug/, fall back to src-tauri/resources/
+            if cfg!(debug_assertions) {
+                let dev_resources = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources");
+                if dev_resources.exists() {
+                    resource_dir = dev_resources;
+                }
+            }
+
+            let resources = embedded::EmbeddedResources::new(resource_dir.clone(), data_dir.clone());
+            println!("[AndroidQTools] resource_dir: {:?}", resource_dir);
+            println!("[AndroidQTools] adb_path: {:?}, exists: {}", resources.adb_path(), resources.adb_path().exists());
             resources.ensure_executable_permissions().ok();
             resources.ensure_jre_extracted().ok();
 
