@@ -30,27 +30,34 @@
   let keystoreAliases: string[] = [];
   let loadingAliases = false;
   let aliasError = '';
+  let lastFetchedKey = '';
 
   $: keystoreFilename = keystoreForm.path ? keystoreForm.path.split(/[/\\]/).pop() : '';
 
-  // Auto-fetch aliases when keystore path and store password are both set
-  $: if (keystoreForm.path && keystoreForm.store_password) {
-    fetchAliases(keystoreForm.path, keystoreForm.store_password);
-  } else {
-    keystoreAliases = [];
-    keystoreForm.alias = '';
-    aliasError = '';
-  }
-
   let fetchAliasesTimer: ReturnType<typeof setTimeout> | null = null;
-  function fetchAliases(path: string, password: string) {
-    // Debounce to avoid calling on every keystroke
+
+  function onKeystoreInputChange() {
+    const key = `${keystoreForm.path}|${keystoreForm.store_password}`;
+    if (key === lastFetchedKey) return;
+
     if (fetchAliasesTimer) clearTimeout(fetchAliasesTimer);
+
+    if (!keystoreForm.path || !keystoreForm.store_password) {
+      keystoreAliases = [];
+      keystoreForm.alias = '';
+      aliasError = '';
+      lastFetchedKey = '';
+      return;
+    }
+
     fetchAliasesTimer = setTimeout(async () => {
+      const currentKey = `${keystoreForm.path}|${keystoreForm.store_password}`;
+      if (currentKey === lastFetchedKey) return;
       loadingAliases = true;
       aliasError = '';
       try {
-        const aliases = await listKeystoreAliases(path, password);
+        const aliases = await listKeystoreAliases(keystoreForm.path, keystoreForm.store_password);
+        lastFetchedKey = currentKey;
         keystoreAliases = aliases;
         if (aliases.length === 1) {
           keystoreForm.alias = aliases[0];
@@ -58,13 +65,14 @@
           keystoreForm.alias = '';
         }
       } catch (e) {
+        lastFetchedKey = currentKey;
         keystoreAliases = [];
         keystoreForm.alias = '';
         aliasError = String(e).replace(/^keytool error:\s*/i, '');
       } finally {
         loadingAliases = false;
       }
-    }, 500);
+    }, 600);
   }
 
   onMount(async () => {
@@ -128,6 +136,7 @@
     });
     if (path) {
       keystoreForm.path = path as string;
+      onKeystoreInputChange();
     }
   }
 
@@ -254,6 +263,16 @@
             </div>
           </div>
           <div class="keystore-field">
+            <!-- svelte-ignore a11y_label_has_associated_control -->
+            <label>Store Password</label>
+            <Input bind:value={keystoreForm.store_password} placeholder="Store password" type="password" size="sm" on:input={onKeystoreInputChange} />
+          </div>
+          <div class="keystore-field">
+            <!-- svelte-ignore a11y_label_has_associated_control -->
+            <label>Key Password</label>
+            <Input bind:value={keystoreForm.key_password} placeholder="Key password" type="password" size="sm" />
+          </div>
+          <div class="keystore-field full-width">
             <label for="alias-select">Key Alias</label>
             {#if loadingAliases}
               <div class="alias-loading">
@@ -273,18 +292,8 @@
                 {/each}
               </select>
             {:else}
-              <div class="alias-placeholder">Enter keystore file &amp; password first</div>
+              <div class="alias-placeholder">Select keystore file &amp; enter store password first</div>
             {/if}
-          </div>
-          <div class="keystore-field">
-            <!-- svelte-ignore a11y_label_has_associated_control -->
-            <label>Store Password</label>
-            <Input bind:value={keystoreForm.store_password} placeholder="Store password" type="password" size="sm" />
-          </div>
-          <div class="keystore-field">
-            <!-- svelte-ignore a11y_label_has_associated_control -->
-            <label>Key Password</label>
-            <Input bind:value={keystoreForm.key_password} placeholder="Key password" type="password" size="sm" />
           </div>
         </div>
       </div>
