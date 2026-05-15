@@ -116,6 +116,15 @@ pub async fn query_log_history(
 }
 
 #[tauri::command]
+pub async fn list_keystore_aliases(
+    state: State<'_, AppState>,
+    keystore_path: String,
+    store_password: String,
+) -> Result<Vec<String>, String> {
+    crate::installer::list_keystore_aliases(&state.resources, &keystore_path, &store_password).await
+}
+
+#[tauri::command]
 pub async fn install_apk(
     state: State<'_, AppState>,
     serial: String,

@@ -47,6 +47,10 @@ export async function queryLogHistory(
   return invoke('query_log_history', { device, from, to, limit });
 }
 
+export async function listKeystoreAliases(keystorePath: string, storePassword: string): Promise<string[]> {
+  return invoke('list_keystore_aliases', { keystorePath, storePassword });
+}
+
 export async function installApk(serial: string, path: string): Promise<string> {
   return invoke('install_apk', { serial, path });
 }

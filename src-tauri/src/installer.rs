@@ -18,6 +18,52 @@ pub struct InstallProgress {
     pub message: String,
 }
 
+pub async fn list_keystore_aliases(
+    resources: &EmbeddedResources,
+    keystore_path: &str,
+    store_password: &str,
+) -> Result<Vec<String>, String> {
+    let keytool = resources.keytool_path();
+    if !keytool.exists() {
+        return Err("keytool not found in embedded JRE".to_string());
+    }
+
+    let output = Command::new(&keytool)
+        .args([
+            "-list",
+            "-keystore", keystore_path,
+            "-storepass", store_password,
+        ])
+        .output()
+        .await
+        .map_err(|e| format!("keytool failed: {}", e))?;
+
+    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+
+    if !output.status.success() {
+        return Err(format!("keytool error: {} {}", stdout, stderr));
+    }
+
+    // keytool -list output format: each alias line looks like:
+    // "alias_name, Oct 10, 2023, PrivateKeyEntry,"
+    let aliases: Vec<String> = stdout
+        .lines()
+        .filter_map(|line| {
+            let line = line.trim();
+            // Alias lines contain a comma-separated date and entry type
+            if line.contains("PrivateKeyEntry") || line.contains("SecretKeyEntry") || line.contains("trustedCertEntry") {
+                line.split(',').next().map(|s| s.trim().to_string())
+            } else {
+                None
+            }
+        })
+        .filter(|alias| !alias.is_empty())
+        .collect();
+
+    Ok(aliases)
+}
+
 pub async fn install_apk(
     adb_path: &PathBuf,
     serial: &str,

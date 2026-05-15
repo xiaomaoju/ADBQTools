@@ -6,7 +6,7 @@
   import ProgressBar from './ui/ProgressBar.svelte';
   import { activeDevice, activeDeviceSerial } from '../stores/devices';
   import { installProgress, addInstallRecord, savedKeystore } from '../stores/installer';
-  import { installApk, installAab, onInstallProgress } from '../utils/tauri';
+  import { installApk, installAab, onInstallProgress, listKeystoreAliases } from '../utils/tauri';
   import { open } from '@tauri-apps/plugin-dialog';
   import type { KeystoreConfig } from '../types';
   import { onMount, onDestroy } from 'svelte';
@@ -27,7 +27,45 @@
     key_password: '',
   };
 
+  let keystoreAliases: string[] = [];
+  let loadingAliases = false;
+  let aliasError = '';
+
   $: keystoreFilename = keystoreForm.path ? keystoreForm.path.split(/[/\\]/).pop() : '';
+
+  // Auto-fetch aliases when keystore path and store password are both set
+  $: if (keystoreForm.path && keystoreForm.store_password) {
+    fetchAliases(keystoreForm.path, keystoreForm.store_password);
+  } else {
+    keystoreAliases = [];
+    keystoreForm.alias = '';
+    aliasError = '';
+  }
+
+  let fetchAliasesTimer: ReturnType<typeof setTimeout> | null = null;
+  function fetchAliases(path: string, password: string) {
+    // Debounce to avoid calling on every keystroke
+    if (fetchAliasesTimer) clearTimeout(fetchAliasesTimer);
+    fetchAliasesTimer = setTimeout(async () => {
+      loadingAliases = true;
+      aliasError = '';
+      try {
+        const aliases = await listKeystoreAliases(path, password);
+        keystoreAliases = aliases;
+        if (aliases.length === 1) {
+          keystoreForm.alias = aliases[0];
+        } else if (!aliases.includes(keystoreForm.alias)) {
+          keystoreForm.alias = '';
+        }
+      } catch (e) {
+        keystoreAliases = [];
+        keystoreForm.alias = '';
+        aliasError = String(e).replace(/^keytool error:\s*/i, '');
+      } finally {
+        loadingAliases = false;
+      }
+    }, 500);
+  }
 
   onMount(async () => {
     unlisten = await onInstallProgress((progress) => {
@@ -216,9 +254,27 @@
             </div>
           </div>
           <div class="keystore-field">
-            <!-- svelte-ignore a11y_label_has_associated_control -->
-            <label>Key Alias</label>
-            <Input bind:value={keystoreForm.alias} placeholder="e.g. my-key-alias" size="sm" />
+            <label for="alias-select">Key Alias</label>
+            {#if loadingAliases}
+              <div class="alias-loading">
+                <span class="spinner small"></span> Reading aliases...
+              </div>
+            {:else if aliasError}
+              <div class="alias-error" title={aliasError}>
+                {aliasError.length > 40 ? aliasError.slice(0, 40) + '...' : aliasError}
+              </div>
+            {:else if keystoreAliases.length > 0}
+              <select id="alias-select" class="alias-select" bind:value={keystoreForm.alias}>
+                {#if keystoreAliases.length > 1}
+                  <option value="" disabled>Select an alias...</option>
+                {/if}
+                {#each keystoreAliases as alias}
+                  <option value={alias}>{alias}</option>
+                {/each}
+              </select>
+            {:else}
+              <div class="alias-placeholder">Enter keystore file &amp; password first</div>
+            {/if}
           </div>
           <div class="keystore-field">
             <!-- svelte-ignore a11y_label_has_associated_control -->
@@ -533,6 +589,67 @@
   }
   .keystore-browse-btn:hover {
     background: var(--border-color);
+  }
+
+  /* Alias Select */
+  .alias-select {
+    height: 30px;
+    padding: 0 8px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    color: var(--text-bright);
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    width: 100%;
+  }
+  .alias-select:focus {
+    border-color: var(--accent);
+    outline: none;
+  }
+  .alias-loading {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 30px;
+    padding: 0 10px;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .spinner.small {
+    width: 10px;
+    height: 10px;
+    border-width: 1.5px;
+    border-color: rgba(255,255,255,0.2);
+    border-top-color: var(--accent);
+    margin-right: 0;
+  }
+  .alias-error {
+    height: 30px;
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    font-size: 11px;
+    color: var(--error);
+    background: rgba(255, 80, 80, 0.08);
+    border: 1px solid rgba(255, 80, 80, 0.2);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .alias-placeholder {
+    height: 30px;
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    opacity: 0.5;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
   }
 
   /* Progress */

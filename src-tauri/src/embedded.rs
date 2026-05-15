@@ -46,6 +46,15 @@ impl EmbeddedResources {
         }
     }
 
+    pub fn keytool_path(&self) -> PathBuf {
+        let jre_dir = self.data_dir.join("jre");
+        if cfg!(target_os = "windows") {
+            jre_dir.join("bin").join("keytool.exe")
+        } else {
+            jre_dir.join("Contents").join("Home").join("bin").join("keytool")
+        }
+    }
+
     pub fn jre_source_dir(&self) -> PathBuf {
         self.resource_dir.join(platform_subdir()).join("jre")
     }
