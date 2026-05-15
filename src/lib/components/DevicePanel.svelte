@@ -1,9 +1,10 @@
 <script lang="ts">
   import { devices, activeDeviceSerial, onlineDevices } from '../stores/devices';
-  import { disconnectDevice } from '../utils/tauri';
+  import { disconnectDevice, restartAdb } from '../utils/tauri';
   import type { Device } from '../types';
 
   export let onWifiClick: () => void = () => {};
+  let restarting = false;
 
   async function handleDisconnect(e: Event, serial: string) {
     e.stopPropagation();
@@ -70,6 +71,24 @@
       <path d="M1.42 9a16 16 0 0 1 21.16 0"></path>
       <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
       <line x1="12" y1="20" x2="12.01" y2="20"></line>
+    </svg>
+  </button>
+  <button
+    class="restart-btn"
+    class:restarting
+    disabled={restarting}
+    title="Restart ADB (kill-server + start-server)"
+    on:click={async () => {
+      restarting = true;
+      try { await restartAdb(); } catch (e) { console.error('restart adb:', e); }
+      restarting = false;
+    }}
+  >
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class:spin={restarting}>
+      <polyline points="23 4 23 10 17 10"></polyline>
+      <polyline points="1 20 1 14 7 14"></polyline>
+      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>
+      <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"></path>
     </svg>
   </button>
 </div>
@@ -199,4 +218,31 @@
     color: var(--accent);
     background: var(--bg-hover);
   }
+  .restart-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: none;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.15s;
+  }
+  .restart-btn:hover {
+    border-color: var(--warning);
+    color: var(--warning);
+    background: var(--bg-hover);
+  }
+  .restart-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .spin {
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
 </style>

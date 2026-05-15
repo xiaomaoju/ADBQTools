@@ -79,6 +79,7 @@ fn main() {
             commands::resume_logcat,
             commands::clear_logcat,
             commands::query_log_history,
+            commands::restart_adb,
             commands::list_keystore_aliases,
             commands::install_apk,
             commands::install_aab,

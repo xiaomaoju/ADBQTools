@@ -116,6 +116,11 @@ pub async fn query_log_history(
 }
 
 #[tauri::command]
+pub async fn restart_adb(state: State<'_, AppState>) -> Result<String, String> {
+    state.device_manager.restart_adb().await
+}
+
+#[tauri::command]
 pub async fn list_keystore_aliases(
     state: State<'_, AppState>,
     keystore_path: String,

@@ -202,6 +202,16 @@ impl DeviceManager {
         let output = run_with_timeout(&self.adb_path, &["disconnect", serial], 5).await?;
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
     }
+
+    pub async fn restart_adb(&self) -> Result<String, String> {
+        // kill-server terminates all adb processes
+        let _ = run_with_timeout(&self.adb_path, &["kill-server"], 5).await;
+        // start-server launches a fresh adb daemon
+        let output = run_with_timeout(&self.adb_path, &["start-server"], 10).await?;
+        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+        Ok(format!("{}{}", stdout, stderr).trim().to_string())
+    }
 }
 
 /// Run an adb command with a timeout in seconds. Kills the process if it exceeds the limit.

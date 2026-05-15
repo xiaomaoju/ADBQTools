@@ -47,6 +47,10 @@ export async function queryLogHistory(
   return invoke('query_log_history', { device, from, to, limit });
 }
 
+export async function restartAdb(): Promise<string> {
+  return invoke('restart_adb');
+}
+
 export async function listKeystoreAliases(keystorePath: string, storePassword: string): Promise<string[]> {
   return invoke('list_keystore_aliases', { keystorePath, storePassword });
 }
