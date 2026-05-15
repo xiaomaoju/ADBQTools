@@ -1,0 +1,40 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Tauri: Debug",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/src-tauri/target/debug/androidqtools",
+      "args": [],
+      "cwd": "${workspaceFolder}/src-tauri",
+      "env": {
+        "RUST_LOG": "info",
+        "RUST_BACKTRACE": "1"
+      },
+      "preLaunchTask": "tauri:build-debug",
+      "sourceLanguages": ["rust"]
+    },
+    {
+      "name": "Tauri: Attach to Running",
+      "type": "lldb",
+      "request": "attach",
+      "program": "${workspaceFolder}/src-tauri/target/debug/androidqtools",
+      "sourceLanguages": ["rust"]
+    },
+    {
+      "name": "Rust: Unit Tests",
+      "type": "lldb",
+      "request": "launch",
+      "cargo": {
+        "args": ["test", "--no-run", "--lib"],
+        "filter": {
+          "name": "tauri-app-lib",
+          "kind": "lib"
+        }
+      },
+      "cwd": "${workspaceFolder}/src-tauri",
+      "sourceLanguages": ["rust"]
+    }
+  ]
+}

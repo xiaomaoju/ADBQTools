@@ -1,3 +1,54 @@
 {
-  "svelte.enable-ts-plugin": true
+  // Svelte
+  "svelte.enable-ts-plugin": true,
+
+  // Rust Analyzer
+  "rust-analyzer.linkedProjects": ["src-tauri/Cargo.toml"],
+  "rust-analyzer.cargo.buildScripts.enable": true,
+  "rust-analyzer.procMacro.enable": true,
+  "rust-analyzer.check.command": "clippy",
+
+  // 文件关联
+  "files.associations": {
+    "*.css": "css"
+  },
+
+  // 排除不需要搜索/监视的目录
+  "files.exclude": {
+    "**/node_modules": true,
+    "**/target": true,
+    "**/.svelte-kit": true,
+    "**/build": true,
+    "src-tauri/resources/macos/jre": true,
+    "src-tauri/resources/windows/jre": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/target": true,
+    "**/.svelte-kit": true,
+    "**/build": true,
+    "src-tauri/resources": true
+  },
+
+  // 编辑器
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": null,
+  "[svelte]": {
+    "editor.defaultFormatter": "svelte.svelte-vscode"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[rust]": {
+    "editor.defaultFormatter": "rust-lang.rust-analyzer"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[css]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+
+  // TypeScript
+  "typescript.tsdk": "node_modules/typescript/lib"
 }

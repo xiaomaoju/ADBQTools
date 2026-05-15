@@ -1,0 +1,84 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "tauri:dev",
+      "type": "shell",
+      "command": "npm run tauri dev",
+      "isBackground": true,
+      "problemMatcher": [
+        {
+          "owner": "rust",
+          "fileLocation": ["relative", "${workspaceFolder}/src-tauri"],
+          "pattern": {
+            "regexp": "^\\s*-->\\s+(.+):(\\d+):(\\d+)",
+            "file": 1,
+            "line": 2,
+            "column": 3
+          },
+          "background": {
+            "activeOnStart": true,
+            "beginsPattern": "Running DevCommand",
+            "endsPattern": "Finished|error\\[E"
+          }
+        }
+      ],
+      "group": "build"
+    },
+    {
+      "label": "tauri:build-debug",
+      "type": "shell",
+      "command": "npm run build && cd src-tauri && cargo build",
+      "group": "build",
+      "problemMatcher": ["$rustc"],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "rust:test",
+      "type": "shell",
+      "command": "cd src-tauri && cargo test",
+      "group": "test",
+      "problemMatcher": ["$rustc"],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "rust:clippy",
+      "type": "shell",
+      "command": "cd src-tauri && cargo clippy",
+      "group": "build",
+      "problemMatcher": ["$rustc"]
+    },
+    {
+      "label": "svelte:check",
+      "type": "shell",
+      "command": "npx svelte-check --tsconfig ./tsconfig.json",
+      "group": "build",
+      "problemMatcher": {
+        "owner": "svelte",
+        "fileLocation": ["relative", "${workspaceFolder}"],
+        "pattern": {
+          "regexp": "^(ERROR|WARNING)\\s+\"(.+)\"\\s+(\\d+):(\\d+)\\s+(.+)$",
+          "severity": 1,
+          "file": 2,
+          "line": 3,
+          "column": 4,
+          "message": 5
+        }
+      }
+    },
+    {
+      "label": "frontend:dev",
+      "type": "shell",
+      "command": "npm run dev",
+      "isBackground": true,
+      "problemMatcher": [],
+      "group": "build"
+    }
+  ]
+}
