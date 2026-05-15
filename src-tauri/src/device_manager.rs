@@ -179,11 +179,7 @@ pub async fn start_polling_shared(adb_path: PathBuf, devices: DeviceMap, app: Ap
 
 impl DeviceManager {
     pub async fn connect_wifi(&self, addr: &str) -> Result<String, String> {
-        let output = Command::new(&self.adb_path)
-            .args(["connect", addr])
-            .output()
-            .await
-            .map_err(|e| format!("adb connect failed: {}", e))?;
+        let output = run_with_timeout(&self.adb_path, &["connect", addr], 10).await?;
         let stdout = String::from_utf8_lossy(&output.stdout).to_string();
         if stdout.contains("connected") {
             Ok(stdout)
@@ -193,11 +189,7 @@ impl DeviceManager {
     }
 
     pub async fn pair_device(&self, addr: &str, code: &str) -> Result<String, String> {
-        let output = Command::new(&self.adb_path)
-            .args(["pair", addr, code])
-            .output()
-            .await
-            .map_err(|e| format!("adb pair failed: {}", e))?;
+        let output = run_with_timeout(&self.adb_path, &["pair", addr, code], 15).await?;
         let stdout = String::from_utf8_lossy(&output.stdout).to_string();
         if stdout.contains("Successfully paired") {
             Ok(stdout)
@@ -207,12 +199,25 @@ impl DeviceManager {
     }
 
     pub async fn disconnect_device(&self, serial: &str) -> Result<String, String> {
-        let output = Command::new(&self.adb_path)
-            .args(["disconnect", serial])
-            .output()
-            .await
-            .map_err(|e| format!("adb disconnect failed: {}", e))?;
+        let output = run_with_timeout(&self.adb_path, &["disconnect", serial], 5).await?;
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
+    }
+}
+
+/// Run an adb command with a timeout in seconds. Kills the process if it exceeds the limit.
+async fn run_with_timeout(adb_path: &PathBuf, args: &[&str], timeout_secs: u64) -> Result<std::process::Output, String> {
+    let child = Command::new(adb_path)
+        .args(args)
+        .kill_on_drop(true)
+        .output();
+
+    match tokio::time::timeout(std::time::Duration::from_secs(timeout_secs), child).await {
+        Ok(Ok(output)) => Ok(output),
+        Ok(Err(e)) => Err(format!("adb command failed: {}", e)),
+        Err(_) => {
+            // Timeout — child is dropped here, kill_on_drop sends SIGKILL
+            Err(format!("Connection timed out after {}s", timeout_secs))
+        }
     }
 }
 
