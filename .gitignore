@@ -16,8 +16,7 @@ src-tauri/resources/macos/adb
 src-tauri/resources/windows/adb.exe
 src-tauri/resources/windows/AdbWinApi.dll
 src-tauri/resources/windows/AdbWinUsbApi.dll
-src-tauri/resources/macos/bundletool.jar
-src-tauri/resources/windows/bundletool.jar
+src-tauri/resources/shared/bundletool.jar
 src-tauri/resources/macos/jre/
 src-tauri/resources/windows/jre/
 

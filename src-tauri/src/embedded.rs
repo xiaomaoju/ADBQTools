@@ -34,7 +34,7 @@ impl EmbeddedResources {
     }
 
     pub fn bundletool_path(&self) -> PathBuf {
-        self.resource_dir.join(platform_subdir()).join("bundletool.jar")
+        self.resource_dir.join("shared").join("bundletool.jar")
     }
 
     pub fn jre_java_path(&self) -> PathBuf {
