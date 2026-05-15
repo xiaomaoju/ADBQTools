@@ -1,6 +1,15 @@
 use serde::{Deserialize, Serialize};
 use regex::Regex;
 use std::sync::LazyLock;
+use std::collections::VecDeque;
+use std::path::PathBuf;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use tokio::sync::Mutex;
+use tokio::io::{AsyncBufReadExt, BufReader};
+use tokio::process::Command;
+use tauri::{AppHandle, Emitter};
+use crate::unity_parser;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
@@ -95,6 +104,135 @@ pub fn parse_logcat_line(line: &str, id: u64) -> Option<LogEntry> {
         stack_frames: None,
         unity_script_info: None,
     })
+}
+
+pub struct LogcatSession {
+    serial: String,
+    adb_path: PathBuf,
+    paused: Arc<AtomicBool>,
+    running: Arc<AtomicBool>,
+    buffer: Arc<Mutex<VecDeque<LogEntry>>>,
+    id_counter: Arc<AtomicU64>,
+}
+
+impl LogcatSession {
+    pub fn new(serial: String, adb_path: PathBuf) -> Self {
+        Self {
+            serial,
+            adb_path,
+            paused: Arc::new(AtomicBool::new(false)),
+            running: Arc::new(AtomicBool::new(false)),
+            buffer: Arc::new(Mutex::new(VecDeque::new())),
+            id_counter: Arc::new(AtomicU64::new(1)),
+        }
+    }
+
+    pub fn pause(&self) {
+        self.paused.store(true, Ordering::Relaxed);
+    }
+
+    pub fn resume(&self) {
+        self.paused.store(false, Ordering::Relaxed);
+    }
+
+    pub fn is_paused(&self) -> bool {
+        self.paused.load(Ordering::Relaxed)
+    }
+
+    pub fn stop(&self) {
+        self.running.store(false, Ordering::Relaxed);
+    }
+
+    pub async fn start(&self, app: AppHandle) {
+        self.running.store(true, Ordering::Relaxed);
+        let serial = self.serial.clone();
+        let adb_path = self.adb_path.clone();
+        let paused = self.paused.clone();
+        let running = self.running.clone();
+        let buffer = self.buffer.clone();
+        let id_counter = self.id_counter.clone();
+
+        tokio::spawn(async move {
+            let mut child = match Command::new(&adb_path)
+                .args(["-s", &serial, "logcat", "-v", "threadtime"])
+                .stdout(std::process::Stdio::piped())
+                .stderr(std::process::Stdio::null())
+                .spawn()
+            {
+                Ok(child) => child,
+                Err(e) => {
+                    log::error!("Failed to start logcat for {}: {}", serial, e);
+                    return;
+                }
+            };
+
+            let stdout = child.stdout.take().unwrap();
+            let mut reader = BufReader::new(stdout).lines();
+            let mut batch: Vec<LogEntry> = Vec::with_capacity(50);
+            let mut last_flush = tokio::time::Instant::now();
+            let event_name = format!("logcat-{}", serial);
+
+            while running.load(Ordering::Relaxed) {
+                let timeout = tokio::time::timeout(
+                    std::time::Duration::from_millis(100),
+                    reader.next_line(),
+                );
+
+                match timeout.await {
+                    Ok(Ok(Some(line))) => {
+                        let id = id_counter.fetch_add(1, Ordering::Relaxed);
+                        if let Some(mut entry) = parse_logcat_line(&line, id) {
+                            if entry.source != LogSource::System {
+                                entry.unity_script_info = unity_parser::extract_script_info(&entry.message);
+                            }
+
+                            if paused.load(Ordering::Relaxed) {
+                                let mut buf = buffer.lock().await;
+                                if buf.len() >= 100_000 {
+                                    buf.pop_front();
+                                }
+                                buf.push_back(entry);
+                            } else {
+                                batch.push(entry);
+                            }
+                        }
+                    }
+                    Ok(Ok(None)) => break,
+                    Ok(Err(_)) => break,
+                    Err(_) => {} // timeout, check flush
+                }
+
+                let should_flush = batch.len() >= 50
+                    || (last_flush.elapsed().as_millis() >= 100 && !batch.is_empty());
+
+                if should_flush {
+                    let _ = app.emit(&event_name, &batch);
+                    batch.clear();
+                    last_flush = tokio::time::Instant::now();
+                }
+            }
+
+            let _ = child.kill().await;
+        });
+    }
+
+    pub async fn flush_buffer(&self, app: &AppHandle) {
+        let mut buf = self.buffer.lock().await;
+        if !buf.is_empty() {
+            let entries: Vec<LogEntry> = buf.drain(..).collect();
+            let event_name = format!("logcat-{}", self.serial);
+            let _ = app.emit(&event_name, &entries);
+        }
+    }
+
+    pub async fn clear_logcat(&self) -> Result<(), String> {
+        Command::new(&self.adb_path)
+            .args(["-s", &self.serial, "logcat", "-c"])
+            .output()
+            .await
+            .map_err(|e| format!("logcat clear failed: {}", e))?;
+        Ok(())
+    }
 }
 
 #[cfg(test)]
