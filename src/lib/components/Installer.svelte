@@ -10,6 +10,7 @@
   import { open } from '@tauri-apps/plugin-dialog';
   import type { KeystoreConfig } from '../types';
   import { onMount, onDestroy } from 'svelte';
+  import { getCurrentWebview } from '@tauri-apps/api/webview';
   import type { UnlistenFn } from '@tauri-apps/api/event';
 
   let selectedFile: { name: string; path: string; size: number; type: 'apk' | 'aab' } | null = null;
@@ -17,6 +18,7 @@
   let installing = false;
   let showKeystoreConfig = false;
   let unlisten: UnlistenFn | null = null;
+  let unlistenDrop: UnlistenFn | null = null;
 
   let keystoreForm: KeystoreConfig = {
     path: '',
@@ -45,10 +47,28 @@
     if ($savedKeystore) {
       keystoreForm = { ...$savedKeystore };
     }
+
+    unlistenDrop = await getCurrentWebview().onDragDropEvent((event) => {
+      if (event.payload.type === 'over') {
+        isDragging = true;
+      } else if (event.payload.type === 'drop') {
+        isDragging = false;
+        const paths: string[] = event.payload.paths;
+        const filePath = paths.find(p => p.endsWith('.apk') || p.endsWith('.aab'));
+        if (filePath) {
+          const name = filePath.split(/[/\\]/).pop() ?? filePath;
+          const type = name.endsWith('.aab') ? 'aab' : 'apk';
+          selectedFile = { name, path: filePath, size: 0, type };
+        }
+      } else if (event.payload.type === 'leave') {
+        isDragging = false;
+      }
+    });
   });
 
   onDestroy(() => {
     unlisten?.();
+    unlistenDrop?.();
   });
 
   async function selectFile() {
@@ -62,21 +82,6 @@
     }
   }
 
-  function handleDrop(e: DragEvent) {
-    e.preventDefault();
-    isDragging = false;
-    const file = e.dataTransfer?.files[0];
-    if (file) {
-      const name = file.name;
-      const type = name.endsWith('.aab') ? 'aab' : 'apk';
-      selectedFile = { name, path: (file as any).path ?? name, size: file.size, type };
-    }
-  }
-
-  function handleDragOver(e: DragEvent) {
-    e.preventDefault();
-    isDragging = true;
-  }
 
   async function handleInstall() {
     if (!selectedFile || !$activeDeviceSerial) return;
@@ -103,11 +108,9 @@
     <div
       class="drop-zone"
       class:dragging={isDragging}
-      on:drop={handleDrop}
-      on:dragover={handleDragOver}
-      on:dragleave={() => isDragging = false}
       role="button"
       tabindex="0"
+      on:click={selectFile}
     >
       {#if selectedFile}
         <AppPreview
