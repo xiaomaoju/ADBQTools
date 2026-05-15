@@ -114,7 +114,17 @@
     onClear={handleClear}
     onExport={handleExport}
     onPauseToggle={handlePauseToggle}
+    entryCount={filtered.length}
   />
+
+  <!-- Column header -->
+  <div class="log-header">
+    <span class="hdr-timestamp">Timestamp</span>
+    <span class="hdr-pidtid">PID-TID</span>
+    <span class="hdr-tag">Tag</span>
+    <span class="hdr-level">Lvl</span>
+    <span class="hdr-message">Message</span>
+  </div>
 
   <div
     class="log-container"
@@ -124,16 +134,16 @@
   >
     <div class="log-scroll-spacer" style="height: {$wordWrap ? 'auto' : totalHeight + 'px'}">
       {#if $wordWrap}
-        {#each filtered as entry (entry.id)}
-          <LogcatRow {entry} wrap={true} />
+        {#each filtered as entry, i (entry.id)}
+          <LogcatRow {entry} wrap={true} even={i % 2 === 0} />
           {#if entry.stack_frames && entry.stack_frames.length > 0}
             <StackGroup frames={entry.stack_frames} />
           {/if}
         {/each}
       {:else}
         <div class="log-visible" style="transform: translateY({startIndex * ROW_HEIGHT}px)">
-          {#each visibleEntries as entry (entry.id)}
-            <LogcatRow {entry} wrap={false} />
+          {#each visibleEntries as entry, i (entry.id)}
+            <LogcatRow {entry} wrap={false} even={(startIndex + i) % 2 === 0} />
             {#if entry.stack_frames && entry.stack_frames.length > 0}
               <StackGroup frames={entry.stack_frames} />
             {/if}
@@ -158,6 +168,28 @@
     flex-direction: column;
     height: 100%;
   }
+  .log-header {
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    height: 22px;
+    font-family: var(--font-ui);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
+    flex-shrink: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  .hdr-timestamp { min-width: 175px; max-width: 175px; padding-right: 8px; }
+  .hdr-pidtid    { min-width: 90px;  max-width: 90px;  padding-right: 8px; }
+  .hdr-tag       { min-width: 140px; max-width: 180px; padding-right: 8px; }
+  .hdr-level     { min-width: 22px;  max-width: 22px;  margin-right: 8px; text-align: center; }
+  .hdr-message   { flex: 1; }
+
   .log-container {
     flex: 1;
     overflow-y: auto;
