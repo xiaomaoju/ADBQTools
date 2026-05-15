@@ -65,7 +65,11 @@ export function getFilteredEntries(entries: LogEntry[]): LogEntry[] {
   }
 
   if (search) {
-    if (isRegex) {
+    // Parse structured queries: tag:xxx, pid:xxx, tid:xxx, message:xxx, level:xxx, package:xxx
+    const structured = parseStructuredQuery(search);
+    if (structured) {
+      filtered = applyStructuredFilter(filtered, structured);
+    } else if (isRegex) {
       try {
         const re = new RegExp(search, 'i');
         filtered = filtered.filter(e => re.test(e.message) || re.test(e.tag));
@@ -81,4 +85,41 @@ export function getFilteredEntries(entries: LogEntry[]): LogEntry[] {
   }
 
   return filtered;
+}
+
+interface StructuredQuery {
+  key: string;
+  value: string;
+}
+
+function parseStructuredQuery(search: string): StructuredQuery | null {
+  const match = search.match(/^(tag|pid|tid|message|level|package):(.+)$/i);
+  if (!match) return null;
+  return { key: match[1].toLowerCase(), value: match[2].trim() };
+}
+
+function applyStructuredFilter(entries: LogEntry[], query: StructuredQuery): LogEntry[] {
+  const val = query.value.toLowerCase();
+  switch (query.key) {
+    case 'tag':
+      return entries.filter(e => e.tag.toLowerCase().includes(val));
+    case 'pid':
+      return entries.filter(e => e.pid === Number(query.value));
+    case 'tid':
+      return entries.filter(e => e.tid === Number(query.value));
+    case 'message':
+      return entries.filter(e => e.message.toLowerCase().includes(val));
+    case 'level': {
+      const idx = LOG_LEVEL_ORDER.indexOf(val as LogLevel);
+      if (idx >= 0) {
+        return entries.filter(e => LOG_LEVEL_ORDER.indexOf(e.level) >= idx);
+      }
+      return entries;
+    }
+    case 'package':
+      // package filtering matches tag (process name often in tag)
+      return entries.filter(e => e.tag.toLowerCase().includes(val) || e.message.toLowerCase().includes(val));
+    default:
+      return entries;
+  }
 }
