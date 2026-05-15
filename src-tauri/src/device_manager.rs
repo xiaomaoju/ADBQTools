@@ -145,6 +145,39 @@ impl DeviceManager {
         });
     }
 
+}
+
+/// Standalone polling function that uses a shared DeviceMap.
+/// Called from main.rs so the polling writes to the same map that AppState reads from.
+pub async fn start_polling_shared(adb_path: PathBuf, devices: DeviceMap, app: AppHandle) {
+    tokio::spawn(async move {
+        loop {
+            let output = Command::new(&adb_path)
+                .args(["devices", "-l"])
+                .output()
+                .await;
+
+            if let Ok(output) = output {
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                let new_devices = parse_device_list(&stdout);
+                let new_map: HashMap<String, Device> = new_devices
+                    .into_iter()
+                    .map(|d| (d.serial.clone(), d))
+                    .collect();
+
+                let mut current = devices.lock().await;
+                if device_map_changed(&current, &new_map) {
+                    *current = new_map.clone();
+                    let device_list: Vec<Device> = new_map.into_values().collect();
+                    let _ = app.emit("devices-changed", &device_list);
+                }
+            }
+            tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+        }
+    });
+}
+
+impl DeviceManager {
     pub async fn connect_wifi(&self, addr: &str) -> Result<String, String> {
         let output = Command::new(&self.adb_path)
             .args(["connect", addr])

@@ -53,9 +53,10 @@ fn main() {
             let device_manager = device_manager::DeviceManager::new(resources.adb_path());
 
             let app_handle = app.handle().clone();
-            let dm_for_poll = device_manager::DeviceManager::new(resources.adb_path());
+            let poll_devices = device_manager.devices();
+            let poll_adb = resources.adb_path();
             tauri::async_runtime::spawn(async move {
-                dm_for_poll.start_polling(app_handle).await;
+                device_manager::start_polling_shared(poll_adb, poll_devices, app_handle).await;
             });
 
             app.manage(AppState {
