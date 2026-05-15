@@ -12,6 +12,12 @@
   let status: string = '';
   let loading: boolean = false;
 
+  // Reset loading state when dialog is reopened
+  $: if (open) {
+    loading = false;
+    status = '';
+  }
+
   async function handleConnect() {
     loading = true;
     status = '';
