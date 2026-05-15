@@ -1,8 +1,18 @@
 <script lang="ts">
   import { devices, activeDeviceSerial, onlineDevices } from '../stores/devices';
+  import { disconnectDevice } from '../utils/tauri';
   import type { Device } from '../types';
 
   export let onWifiClick: () => void = () => {};
+
+  async function handleDisconnect(e: Event, serial: string) {
+    e.stopPropagation();
+    try {
+      await disconnectDevice(serial);
+    } catch (err) {
+      console.error('Disconnect failed:', err);
+    }
+  }
 
   function selectDevice(serial: string) {
     $activeDeviceSerial = serial;
@@ -38,6 +48,16 @@
         <span class="status-dot" style="background: {statusColor(device)}"></span>
         <span class="chip-icon">{transportIcon(device)}</span>
         <span class="chip-label">{device.model || device.serial}</span>
+        {#if device.transport === 'wifi'}
+          <span
+            class="chip-disconnect"
+            role="button"
+            tabindex="0"
+            title="Disconnect"
+            on:click={(e) => handleDisconnect(e, device.serial)}
+            on:keydown={(e) => { if (e.key === 'Enter') handleDisconnect(e, device.serial); }}
+          >&times;</span>
+        {/if}
       </button>
     {:else}
       <span class="empty-hint">No devices</span>
@@ -134,6 +154,25 @@
     max-width: 120px;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+  .chip-disconnect {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    font-size: 12px;
+    line-height: 1;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.12s;
+    margin-left: 2px;
+    flex-shrink: 0;
+  }
+  .chip-disconnect:hover {
+    background: rgba(244, 71, 71, 0.2);
+    color: var(--error);
   }
   .empty-hint {
     font-size: 11px;
