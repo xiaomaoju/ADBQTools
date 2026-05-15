@@ -4,10 +4,19 @@
   function formatTime(ts: number): string {
     return new Date(ts).toLocaleString();
   }
+
+  function clearHistory() {
+    $installHistory = [];
+  }
 </script>
 
 <div class="history">
-  <div class="history-header">Install History</div>
+  <div class="history-header">
+    <span>Install History</span>
+    {#if $installHistory.length > 0}
+      <button class="clear-btn" on:click={clearHistory} title="Clear history">&times;</button>
+    {/if}
+  </div>
   <div class="history-list">
     {#each $installHistory as record (record.id)}
       <div class="history-item">
@@ -29,12 +38,29 @@
 <style>
   .history { display: flex; flex-direction: column; height: 100%; }
   .history-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     font-size: 12px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     color: var(--text-secondary);
     padding: 8px 0;
+  }
+  .clear-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 16px;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+    border-radius: var(--radius-sm);
+  }
+  .clear-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-bright);
   }
   .history-list { flex: 1; overflow-y: auto; }
   .history-item {
