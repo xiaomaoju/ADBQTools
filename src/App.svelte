@@ -1,23 +1,70 @@
 <script lang="ts">
   import './styles/global.css';
+  import { onMount, onDestroy } from 'svelte';
+  import DevicePanel from './lib/components/DevicePanel.svelte';
+  import WifiDialog from './lib/components/WifiDialog.svelte';
+  import Toolbar from './lib/components/Toolbar.svelte';
+  import LogcatViewer from './lib/components/LogcatViewer.svelte';
+  import Installer from './lib/components/Installer.svelte';
+  import StatusBar from './lib/components/StatusBar.svelte';
+  import { devices, activeDeviceSerial } from './lib/stores/devices';
+  import { onDevicesChanged, getDevices } from './lib/utils/tauri';
+  import type { ViewMode } from './lib/types';
+  import type { UnlistenFn } from '@tauri-apps/api/event';
+
+  let currentView: ViewMode = 'logcat';
+  let showWifiDialog = false;
+  let unlisten: UnlistenFn | null = null;
+
+  onMount(async () => {
+    try {
+      const initial = await getDevices();
+      $devices = initial;
+      if (initial.length > 0 && !$activeDeviceSerial) {
+        $activeDeviceSerial = initial[0].serial;
+      }
+    } catch (e) {
+      console.error('Failed to get initial devices:', e);
+    }
+
+    unlisten = await onDevicesChanged((newDevices) => {
+      $devices = newDevices;
+      if (newDevices.length > 0 && !$activeDeviceSerial) {
+        $activeDeviceSerial = newDevices[0].serial;
+      }
+      if ($activeDeviceSerial && !newDevices.find(d => d.serial === $activeDeviceSerial)) {
+        $activeDeviceSerial = newDevices[0]?.serial ?? null;
+      }
+    });
+  });
+
+  onDestroy(() => {
+    unlisten?.();
+  });
 </script>
 
 <main class="app-shell">
   <div class="sidebar">
-    <p style="padding: 12px; color: var(--text-secondary);">Devices</p>
+    <DevicePanel onWifiClick={() => showWifiDialog = true} />
   </div>
   <div class="content">
-    <div class="toolbar">
-      <p style="padding: 8px;">AndroidQTools</p>
+    <div class="toolbar-area">
+      <Toolbar bind:currentView />
     </div>
     <div class="main-area">
-      <p style="padding: 20px; color: var(--text-secondary);">Main content area</p>
+      {#if currentView === 'logcat'}
+        <LogcatViewer />
+      {:else}
+        <Installer />
+      {/if}
     </div>
-    <div class="statusbar">
-      <span>Ready</span>
+    <div class="statusbar-area">
+      <StatusBar />
     </div>
   </div>
 </main>
+
+<WifiDialog bind:open={showWifiDialog} />
 
 <style>
   .app-shell {
@@ -30,8 +77,6 @@
     min-width: var(--sidebar-width);
     background: var(--bg-secondary);
     border-right: 1px solid var(--border-color);
-    display: flex;
-    flex-direction: column;
   }
   .content {
     flex: 1;
@@ -39,24 +84,21 @@
     flex-direction: column;
     min-width: 0;
   }
-  .toolbar {
-    height: var(--toolbar-height);
+  .toolbar-area {
     background: var(--bg-secondary);
     border-bottom: 1px solid var(--border-color);
-    display: flex;
-    align-items: center;
   }
   .main-area {
     flex: 1;
     overflow: hidden;
+    position: relative;
   }
-  .statusbar {
+  .statusbar-area {
     height: var(--statusbar-height);
     background: var(--accent);
     color: white;
     display: flex;
     align-items: center;
     padding: 0 12px;
-    font-size: 12px;
   }
 </style>
