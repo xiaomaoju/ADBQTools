@@ -77,8 +77,18 @@
       "type": "shell",
       "command": "npm run dev",
       "isBackground": true,
-      "problemMatcher": [],
-      "group": "build"
+      "group": "build",
+      "problemMatcher": {
+        "owner": "vite",
+        "pattern": {
+          "regexp": "^$"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "VITE",
+          "endsPattern": "ready in \\d+"
+        }
+      }
     }
   ]
 }
