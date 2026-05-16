@@ -1,0 +1,80 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos
+            os: macos-latest
+            target: aarch64-apple-darwin
+            args: '--target aarch64-apple-darwin'
+          - platform: windows
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+            args: ''
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install dependencies (npm)
+        run: npm ci
+
+      # --- Download embedded resources ---
+      - name: Download resources (macOS)
+        if: matrix.platform == 'macos'
+        run: |
+          chmod +x scripts/download-resources.sh
+          ./scripts/download-resources.sh macos
+
+      - name: Download resources (Windows)
+        if: matrix.platform == 'windows'
+        shell: bash
+        run: |
+          chmod +x scripts/download-resources.sh
+          ./scripts/download-resources.sh windows
+
+      # --- Build with Tauri ---
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'ADBQTools ${{ github.ref_name }}'
+          releaseBody: |
+            See the [README](https://github.com/${{ github.repository }}#features--功能) for full feature list.
+
+            ## Downloads
+            | Platform | File |
+            |----------|------|
+            | macOS (Apple Silicon) | `.dmg` |
+            | Windows | `.msi` / `.exe` |
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }}

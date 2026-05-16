@@ -26,6 +26,3 @@ docs/superpowers/
 
 # Rust build artifacts
 src-tauri/target/
-
-# Cargo lock (optional, uncomment to track)
-# src-tauri/Cargo.lock
