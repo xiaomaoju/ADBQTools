@@ -14,7 +14,6 @@ fi
 RESOURCE_DIR="src-tauri/resources"
 
 # --- Versions ---
-PLATFORM_TOOLS_VERSION="35.0.2"
 BUNDLETOOL_VERSION="1.17.2"
 JRE_VERSION="21.0.3+9"
 JRE_VERSION_URL="21.0.3%2B9"  # URL-encoded
@@ -39,7 +38,7 @@ if [[ "$PLATFORM" == "macos" ]]; then
   if [[ ! -f "$TARGET_DIR/adb" ]]; then
     echo "[2/3] Downloading Android platform-tools (macOS)..."
     curl -fSL -o /tmp/platform-tools.zip \
-      "https://dl.google.com/android/repository/platform-tools_r${PLATFORM_TOOLS_VERSION}-darwin.zip"
+      "https://dl.google.com/android/repository/platform-tools-latest-darwin.zip"
     unzip -q -o /tmp/platform-tools.zip -d /tmp/pt
     cp /tmp/pt/platform-tools/adb "$TARGET_DIR/adb"
     chmod +x "$TARGET_DIR/adb"
@@ -53,7 +52,7 @@ elif [[ "$PLATFORM" == "windows" ]]; then
   if [[ ! -f "$TARGET_DIR/adb.exe" ]]; then
     echo "[2/3] Downloading Android platform-tools (Windows)..."
     curl -fSL -o /tmp/platform-tools.zip \
-      "https://dl.google.com/android/repository/platform-tools_r${PLATFORM_TOOLS_VERSION}-windows.zip"
+      "https://dl.google.com/android/repository/platform-tools-latest-windows.zip"
     unzip -q -o /tmp/platform-tools.zip -d /tmp/pt
     cp /tmp/pt/platform-tools/adb.exe "$TARGET_DIR/adb.exe"
     cp /tmp/pt/platform-tools/AdbWinApi.dll "$TARGET_DIR/AdbWinApi.dll"
