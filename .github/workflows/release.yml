@@ -51,6 +51,9 @@ jobs:
         run: |
           chmod +x scripts/download-resources.sh
           ./scripts/download-resources.sh macos
+          # Create empty windows dir so tauri resource glob doesn't fail
+          mkdir -p src-tauri/resources/windows
+          touch src-tauri/resources/windows/.gitkeep
 
       - name: Download resources (Windows)
         if: matrix.platform == 'windows'
@@ -58,6 +61,9 @@ jobs:
         run: |
           chmod +x scripts/download-resources.sh
           ./scripts/download-resources.sh windows
+          # Create empty macos dir so tauri resource glob doesn't fail
+          mkdir -p src-tauri/resources/macos
+          touch src-tauri/resources/macos/.gitkeep
 
       # --- Build with Tauri ---
       - name: Build Tauri app
