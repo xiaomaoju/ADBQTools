@@ -42,8 +42,8 @@ fn main() {
             }
 
             let resources = embedded::EmbeddedResources::new(resource_dir.clone(), data_dir.clone());
-            println!("[AndroidQTools] resource_dir: {:?}", resource_dir);
-            println!("[AndroidQTools] adb_path: {:?}, exists: {}", resources.adb_path(), resources.adb_path().exists());
+            println!("[ADBQTools] resource_dir: {:?}", resource_dir);
+            println!("[ADBQTools] adb_path: {:?}, exists: {}", resources.adb_path(), resources.adb_path().exists());
             resources.ensure_executable_permissions().ok();
             resources.ensure_jre_extracted().ok();
 

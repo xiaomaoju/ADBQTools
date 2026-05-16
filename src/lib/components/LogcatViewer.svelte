@@ -6,12 +6,50 @@
   import Tabs from './ui/Tabs.svelte';
   import { logEntries, addLogEntries, clearLogEntries, getFilteredEntries, autoScroll, isPaused, wordWrap } from '../stores/logcat';
   import { devices, activeDeviceSerial } from '../stores/devices';
-  import { startLogcat, stopLogcat, pauseLogcat, resumeLogcat, clearLogcat, onLogcat } from '../utils/tauri';
+  import { startLogcat, stopLogcat, pauseLogcat, resumeLogcat, clearLogcat, onLogcat, onLogcatError } from '../utils/tauri';
+  import { tt } from '../i18n';
+  import { columnWidths, type ColumnWidths } from '../stores/columnWidths';
   import type { LogEntry } from '../types';
   import type { UnlistenFn } from '@tauri-apps/api/event';
 
   let container: HTMLDivElement;
-  let unlisteners: Map<string, UnlistenFn> = new Map();
+  let startedSerials: Set<string> = new Set();
+
+  let resizing: keyof ColumnWidths | null = null;
+  let resizeStartX = 0;
+  let resizeStartW = 0;
+
+  function onResizeStart(col: keyof ColumnWidths, e: MouseEvent) {
+    e.preventDefault();
+    resizing = col;
+    resizeStartX = e.clientX;
+    resizeStartW = $columnWidths[col];
+    window.addEventListener('mousemove', onResizeMove);
+    window.addEventListener('mouseup', onResizeEnd);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  }
+
+  function onResizeMove(e: MouseEvent) {
+    if (!resizing) return;
+    const delta = e.clientX - resizeStartX;
+    columnWidths.resize(resizing, resizeStartW + delta);
+  }
+
+  function onResizeEnd() {
+    resizing = null;
+    window.removeEventListener('mousemove', onResizeMove);
+    window.removeEventListener('mouseup', onResizeEnd);
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  }
+
+  function onResizeDblClick(col: keyof ColumnWidths) {
+    columnWidths.reset();
+  }
+  let logcatUnlisten: UnlistenFn | null = null;
+  let errorUnlisten: UnlistenFn | null = null;
+  let logcatDiag: string[] = [];
   const ROW_HEIGHT = 20;
   let scrollTop = 0;
   let containerHeight = 0;
@@ -29,21 +67,22 @@
   $: visibleEntries = filtered.slice(startIndex, startIndex + visibleCount);
 
   async function subscribeLogcat(serial: string) {
-    if (unlisteners.has(serial)) return;
+    if (startedSerials.has(serial)) return;
+    startedSerials.add(serial);
     try {
+      try { await stopLogcat(serial); } catch (_) { /* ignore */ }
       await startLogcat(serial);
-      const unlisten = await onLogcat(serial, (entries) => {
-        addLogEntries(serial, entries);
-        if ($autoScroll && container) {
-          tick().then(() => {
-            container.scrollTop = container.scrollHeight;
-          });
-        }
-      });
-      unlisteners.set(serial, unlisten);
     } catch (e) {
       console.error(`Failed to start logcat for ${serial}:`, e);
+      startedSerials.delete(serial);
     }
+  }
+
+  /** Force restart logcat for a serial */
+  async function restartLogcat(serial: string) {
+    startedSerials.delete(serial);
+    try { await stopLogcat(serial); } catch (_) { /* ignore */ }
+    await subscribeLogcat(serial);
   }
 
   function handleScroll() {
@@ -71,7 +110,7 @@
 
   function handleExport() {
     const lines = filtered.map(e =>
-      `${e.timestamp} ${e.pid} ${e.tid} ${e.level.charAt(0).toUpperCase()} ${e.tag}: ${e.message}`
+      `${e.timestamp} ${e.pid} ${e.tid} ${e.package_name || '-'} ${e.level.charAt(0).toUpperCase()} ${e.tag}: ${e.message}`
     );
     const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
@@ -86,20 +125,41 @@
     subscribeLogcat($activeDeviceSerial);
   }
 
-  onMount(() => {
+  onMount(async () => {
     if (container) {
       containerHeight = container.clientHeight;
       const ro = new ResizeObserver(() => {
         containerHeight = container.clientHeight;
       });
       ro.observe(container);
-      return () => ro.disconnect();
+    }
+
+    // Single global listener for ALL logcat data (avoids colon issues in event names)
+    logcatUnlisten = await onLogcat((serial, entries) => {
+      addLogEntries(serial, entries);
+      if ($autoScroll && container) {
+        tick().then(() => {
+          container.scrollTop = container.scrollHeight;
+        });
+      }
+    });
+
+    // Listen for logcat diagnostic/error messages from backend
+    errorUnlisten = await onLogcatError((msg) => {
+      console.warn('[logcat-diag]', msg);
+      logcatDiag = [...logcatDiag.slice(-19), msg]; // keep last 20
+    });
+
+    // Start logcat for current device if already selected
+    if ($activeDeviceSerial) {
+      subscribeLogcat($activeDeviceSerial);
     }
   });
 
   onDestroy(() => {
-    unlisteners.forEach((unlisten, serial) => {
-      unlisten();
+    logcatUnlisten?.();
+    errorUnlisten?.();
+    startedSerials.forEach(serial => {
       stopLogcat(serial);
     });
   });
@@ -119,11 +179,27 @@
 
   <!-- Column header -->
   <div class="log-header">
-    <span class="hdr-timestamp">Timestamp</span>
-    <span class="hdr-pidtid">PID-TID</span>
-    <span class="hdr-tag">Tag</span>
-    <span class="hdr-level">Lvl</span>
-    <span class="hdr-message">Message</span>
+    <span class="hdr-col" style="width:{$columnWidths.timestamp}px">
+      {$tt('logcat.hdr_timestamp')}
+      <span class="resize-handle" role="separator" aria-orientation="vertical" on:mousedown={(e) => onResizeStart('timestamp', e)} on:dblclick={() => onResizeDblClick('timestamp')}></span>
+    </span>
+    <span class="hdr-col" style="width:{$columnWidths.pidtid}px">
+      {$tt('logcat.hdr_pidtid')}
+      <span class="resize-handle" role="separator" aria-orientation="vertical" on:mousedown={(e) => onResizeStart('pidtid', e)} on:dblclick={() => onResizeDblClick('pidtid')}></span>
+    </span>
+    <span class="hdr-col" style="width:{$columnWidths.package_name}px">
+      {$tt('logcat.hdr_package')}
+      <span class="resize-handle" role="separator" aria-orientation="vertical" on:mousedown={(e) => onResizeStart('package_name', e)} on:dblclick={() => onResizeDblClick('package_name')}></span>
+    </span>
+    <span class="hdr-col" style="width:{$columnWidths.tag}px">
+      {$tt('logcat.hdr_tag')}
+      <span class="resize-handle" role="separator" aria-orientation="vertical" on:mousedown={(e) => onResizeStart('tag', e)} on:dblclick={() => onResizeDblClick('tag')}></span>
+    </span>
+    <span class="hdr-col" style="width:{$columnWidths.level}px">
+      {$tt('logcat.hdr_level')}
+      <span class="resize-handle" role="separator" aria-orientation="vertical" on:mousedown={(e) => onResizeStart('level', e)} on:dblclick={() => onResizeDblClick('level')}></span>
+    </span>
+    <span class="hdr-col hdr-message">{$tt('logcat.hdr_message')}</span>
   </div>
 
   <div
@@ -154,10 +230,22 @@
   </div>
 
   {#if filtered.length === 0 && allEntries.length > 0}
-    <div class="empty-filter">No entries match current filters</div>
+    <div class="empty-filter">{$tt('logcat.no_match')}</div>
   {:else if allEntries.length === 0}
     <div class="empty-filter">
-      {currentSerial ? 'Waiting for logcat data...' : 'Select a device to start'}
+      {currentSerial ? $tt('logcat.waiting') : $tt('logcat.select_device')}
+      {#if logcatDiag.length > 0}
+        <div class="logcat-diag">
+          {#each logcatDiag as msg}
+            <div class="diag-line">{msg}</div>
+          {/each}
+        </div>
+      {/if}
+      {#if currentSerial}
+        <button class="retry-btn" on:click={() => { logcatDiag = []; restartLogcat(currentSerial); }}>
+          Retry Logcat
+        </button>
+      {/if}
     </div>
   {/if}
 </div>
@@ -184,11 +272,29 @@
     text-transform: uppercase;
     letter-spacing: 0.3px;
   }
-  .hdr-timestamp { min-width: 175px; max-width: 175px; padding-right: 8px; }
-  .hdr-pidtid    { min-width: 90px;  max-width: 90px;  padding-right: 8px; }
-  .hdr-tag       { min-width: 140px; max-width: 180px; padding-right: 8px; }
-  .hdr-level     { min-width: 22px;  max-width: 22px;  margin-right: 8px; text-align: center; }
-  .hdr-message   { flex: 1; }
+  .hdr-col {
+    position: relative;
+    flex-shrink: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-right: 8px;
+    box-sizing: border-box;
+  }
+  .hdr-message { flex: 1; min-width: 0; }
+  .resize-handle {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 5px;
+    height: 100%;
+    cursor: col-resize;
+    z-index: 1;
+  }
+  .resize-handle:hover,
+  .resize-handle:active {
+    background: var(--accent);
+    opacity: 0.5;
+  }
 
   .log-container {
     flex: 1;
@@ -208,5 +314,40 @@
     transform: translate(-50%, -50%);
     color: var(--text-secondary);
     font-size: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    text-align: center;
   }
+  .logcat-diag {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    color: var(--warning);
+    background: rgba(255, 200, 50, 0.06);
+    border: 1px solid rgba(255, 200, 50, 0.2);
+    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+    max-width: 500px;
+    max-height: 160px;
+    overflow-y: auto;
+    text-align: left;
+    word-break: break-all;
+  }
+  .diag-line {
+    padding: 2px 0;
+    border-bottom: 1px solid rgba(255, 200, 50, 0.08);
+  }
+  .diag-line:last-child { border-bottom: none; }
+  .retry-btn {
+    font-size: 12px;
+    padding: 6px 16px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .retry-btn:hover { opacity: 0.85; }
 </style>

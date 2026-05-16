@@ -1,6 +1,7 @@
 <script lang="ts">
   import { filterLevel, filterSearch, filterSearchRegex, unityMode, autoScroll, isPaused, wordWrap } from '../stores/logcat';
   import type { LogLevel } from '../types';
+  import { tt } from '../i18n';
 
   export let onClear: () => void = () => {};
   export let onExport: () => void = () => {};
@@ -27,14 +28,16 @@
     example: string;
   }
 
-  const suggestions: Suggestion[] = [
-    { prefix: 'tag:',     description: 'Filter by log tag',        example: 'tag:Unity' },
-    { prefix: 'pid:',     description: 'Filter by process ID',     example: 'pid:12345' },
-    { prefix: 'tid:',     description: 'Filter by thread ID',      example: 'tid:6789' },
-    { prefix: 'message:', description: 'Filter by message content', example: 'message:error' },
-    { prefix: 'level:',   description: 'Filter by min level',      example: 'level:warn' },
-    { prefix: 'package:', description: 'Filter by package name',   example: 'package:com.example' },
+  const suggestionDefs: { prefix: string; descKey: string; example: string }[] = [
+    { prefix: 'tag:',     descKey: 'suggest.tag',     example: 'tag:Unity' },
+    { prefix: 'pid:',     descKey: 'suggest.pid',     example: 'pid:12345' },
+    { prefix: 'tid:',     descKey: 'suggest.tid',     example: 'tid:6789' },
+    { prefix: 'message:', descKey: 'suggest.message', example: 'message:error' },
+    { prefix: 'level:',   descKey: 'suggest.level',   example: 'level:warn' },
+    { prefix: 'package:', descKey: 'suggest.package', example: 'package:com.example' },
   ];
+
+  $: suggestions = suggestionDefs.map(s => ({ prefix: s.prefix, description: $tt(s.descKey), example: s.example }));
 
   let showSuggestions = false;
   let queryInputEl: HTMLInputElement;
@@ -86,7 +89,7 @@
     </svg>
     <input
       class="query-input"
-      placeholder="Filter logcat... (tag:, pid:, message:)"
+      placeholder={$tt('logcat.filter_placeholder')}
       bind:value={$filterSearch}
       bind:this={queryInputEl}
       on:focus={onQueryFocus}
@@ -100,7 +103,7 @@
     >
       <span class="has-tooltip">
         .*
-        <span class="tooltip">Toggle regex mode</span>
+        <span class="tooltip">{$tt('logcat.regex_toggle')}</span>
       </span>
     </button>
 
@@ -135,7 +138,7 @@
             <span class="chip-letter">{opt.letter}</span>
           {/if}
           {opt.label}
-          <span class="tooltip">{opt.value ? `Show ${opt.label} and above` : 'Show all log levels'}</span>
+          <span class="tooltip">{opt.value ? $tt('logcat.show_above', { level: opt.label }) : $tt('logcat.all_levels')}</span>
         </span>
       </button>
     {/each}
@@ -151,7 +154,7 @@
   >
     <span class="has-tooltip">
       <span class="unity-icon">U</span>
-      <span class="tooltip">Unity filter — show only Unity, IL2CPP, Mono logs</span>
+      <span class="tooltip">{$tt('logcat.unity_filter')}</span>
     </span>
   </button>
 
@@ -166,7 +169,7 @@
           <path d="M3 12h15a3 3 0 1 1 0 6h-4"></path>
           <polyline points="13 16 11 18 13 20"></polyline>
         </svg>
-        <span class="tooltip">Soft-Wrap — wrap long lines</span>
+        <span class="tooltip">{$tt('logcat.soft_wrap')}</span>
       </span>
     </button>
     <button class="icon-btn" class:active={$autoScroll} on:click={() => $autoScroll = !$autoScroll}>
@@ -175,17 +178,17 @@
           <polyline points="7 13 12 18 17 13"></polyline>
           <line x1="12" y1="6" x2="12" y2="18"></line>
         </svg>
-        <span class="tooltip">Scroll to end — auto-follow new logs</span>
+        <span class="tooltip">{$tt('logcat.scroll_end')}</span>
       </span>
     </button>
     <button class="icon-btn" on:click={onPauseToggle}>
       <span class="has-tooltip">
         {#if $isPaused}
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-          <span class="tooltip">Resume — continue receiving logs</span>
+          <span class="tooltip">{$tt('logcat.resume')}</span>
         {:else}
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
-          <span class="tooltip">Pause — stop receiving new logs</span>
+          <span class="tooltip">{$tt('logcat.pause')}</span>
         {/if}
       </span>
     </button>
@@ -195,7 +198,7 @@
           <polyline points="3 6 5 6 21 6"></polyline>
           <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
         </svg>
-        <span class="tooltip">Clear — delete all log entries</span>
+        <span class="tooltip">{$tt('logcat.clear')}</span>
       </span>
     </button>
     <button class="icon-btn" on:click={onExport}>
@@ -205,7 +208,7 @@
           <polyline points="7 10 12 15 17 10"></polyline>
           <line x1="12" y1="15" x2="12" y2="3"></line>
         </svg>
-        <span class="tooltip">Export — save logs to .txt file</span>
+        <span class="tooltip">{$tt('logcat.export')}</span>
       </span>
     </button>
   </div>
@@ -470,7 +473,7 @@
   }
   .tooltip {
     position: absolute;
-    bottom: calc(100% + 8px);
+    top: calc(100% + 8px);
     left: 50%;
     transform: translateX(-50%);
     background: #1a1a1a;
@@ -493,11 +496,11 @@
   .tooltip::after {
     content: '';
     position: absolute;
-    top: 100%;
+    bottom: 100%;
     left: 50%;
     transform: translateX(-50%);
     border: 4px solid transparent;
-    border-top-color: #1a1a1a;
+    border-bottom-color: #1a1a1a;
   }
   .has-tooltip:hover .tooltip {
     opacity: 1;

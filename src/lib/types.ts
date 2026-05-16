@@ -32,6 +32,7 @@ export interface LogEntry {
   level: LogLevel;
   tag: string;
   message: string;
+  package_name: string;
   source: LogSource;
   stack_frames: StackFrame[] | null;
   unity_script_info: ScriptInfo | null;

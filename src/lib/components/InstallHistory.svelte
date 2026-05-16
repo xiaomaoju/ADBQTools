@@ -1,5 +1,6 @@
 <script lang="ts">
   import { installHistory } from '../stores/installer';
+  import { tt } from '../i18n';
 
   function formatTime(ts: number): string {
     return new Date(ts).toLocaleString();
@@ -12,9 +13,9 @@
 
 <div class="history">
   <div class="history-header">
-    <span>Install History</span>
+    <span>{$tt('history.title')}</span>
     {#if $installHistory.length > 0}
-      <button class="clear-btn" on:click={clearHistory} title="Clear history">&times;</button>
+      <button class="clear-btn" on:click={clearHistory} title={$tt('history.clear')}>&times;</button>
     {/if}
   </div>
   <div class="history-list">
@@ -30,7 +31,7 @@
         </div>
       </div>
     {:else}
-      <div class="empty">No install history</div>
+      <div class="empty">{$tt('history.empty')}</div>
     {/each}
   </div>
 </div>

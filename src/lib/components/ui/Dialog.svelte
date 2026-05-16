@@ -1,6 +1,7 @@
 <script lang="ts">
   export let open: boolean = false;
   export let title: string = '';
+  export let wide: boolean = false;
 
   function handleBackdrop(e: MouseEvent) {
     if (e.target === e.currentTarget) open = false;
@@ -9,7 +10,7 @@
 
 {#if open}
   <div class="backdrop" on:click={handleBackdrop} role="presentation">
-    <div class="dialog">
+    <div class="dialog" class:wide>
       <div class="dialog-header">
         <span class="dialog-title">{title}</span>
         <button class="close-btn" on:click={() => open = false}>✕</button>
@@ -35,9 +36,12 @@
     background: var(--bg-secondary);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-lg);
-    min-width: 400px;
+    width: 360px;
     max-width: 90vw;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  }
+  .dialog.wide {
+    min-width: 560px;
   }
   .dialog-header {
     display: flex;

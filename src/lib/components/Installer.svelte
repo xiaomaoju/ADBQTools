@@ -11,6 +11,7 @@
   import type { KeystoreConfig } from '../types';
   import { onMount, onDestroy } from 'svelte';
   import { getCurrentWebview } from '@tauri-apps/api/webview';
+  import { tt } from '../i18n';
   import type { UnlistenFn } from '@tauri-apps/api/event';
 
   let selectedFile: { name: string; path: string; size: number; type: 'apk' | 'aab' } | null = null;
@@ -199,8 +200,8 @@
               <line x1="12" y1="3" x2="12" y2="15" />
             </svg>
           </div>
-          <span class="drop-title">Drag APK / AAB here</span>
-          <span class="drop-sub">or click to browse files</span>
+          <span class="drop-title">{$tt('installer.drag_hint')}</span>
+          <span class="drop-sub">{$tt('installer.browse_hint')}</span>
         </div>
       {/if}
     </div>
@@ -208,7 +209,7 @@
     <!-- Action Bar -->
     <div class="action-bar">
       <div class="action-left">
-        <Button variant="secondary" on:click={selectFile}>Browse Files</Button>
+        <Button variant="secondary" on:click={selectFile}>{$tt('installer.browse')}</Button>
         {#if selectedFile?.type === 'aab'}
           <button
             class="keystore-toggle"
@@ -219,7 +220,7 @@
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
               <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
             </svg>
-            Signing
+            {$tt('installer.signing')}
             <span class="toggle-arrow">{showKeystoreConfig ? '▲' : '▼'}</span>
           </button>
         {/if}
@@ -230,9 +231,9 @@
         on:click={handleInstall}
       >
         {#if installing}
-          <span class="spinner"></span> Installing...
+          <span class="spinner"></span> {$tt('installer.installing')}
         {:else}
-          Install
+          {$tt('installer.install')}
         {/if}
       </Button>
     </div>
@@ -245,18 +246,18 @@
             <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
             <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
           </svg>
-          <span>Signing Configuration</span>
+          <span>{$tt('installer.signing_config')}</span>
         </div>
         <div class="keystore-grid">
           <div class="keystore-field full-width">
             <!-- svelte-ignore a11y_label_has_associated_control -->
-            <label>Keystore File <span class="label-hint">(.jks / .keystore)</span></label>
+            <label>{$tt('installer.keystore_file')} <span class="label-hint">(.jks / .keystore)</span></label>
             <div class="keystore-file-row">
               <div class="keystore-file-display" on:click={selectKeystore} on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') selectKeystore(); }} role="button" tabindex="0">
                 {#if keystoreFilename}
                   <span class="keystore-filename">{keystoreFilename}</span>
                 {:else}
-                  <span class="keystore-placeholder">Select keystore file...</span>
+                  <span class="keystore-placeholder">{$tt('installer.select_keystore')}</span>
                 {/if}
               </div>
               <button class="keystore-browse-btn" on:click={selectKeystore}>Browse</button>
@@ -264,19 +265,19 @@
           </div>
           <div class="keystore-field">
             <!-- svelte-ignore a11y_label_has_associated_control -->
-            <label>Store Password</label>
+            <label>{$tt('installer.store_password')}</label>
             <Input bind:value={keystoreForm.store_password} placeholder="Store password" type="password" size="sm" on:input={onKeystoreInputChange} />
           </div>
           <div class="keystore-field">
             <!-- svelte-ignore a11y_label_has_associated_control -->
-            <label>Key Password</label>
+            <label>{$tt('installer.key_password')}</label>
             <Input bind:value={keystoreForm.key_password} placeholder="Key password" type="password" size="sm" />
           </div>
           <div class="keystore-field full-width">
-            <label for="alias-select">Key Alias</label>
+            <label for="alias-select">{$tt('installer.key_alias')}</label>
             {#if loadingAliases}
               <div class="alias-loading">
-                <span class="spinner small"></span> Reading aliases...
+                <span class="spinner small"></span> {$tt('installer.reading_aliases')}
               </div>
             {:else if aliasError}
               <div class="alias-error" title={aliasError}>
@@ -285,14 +286,14 @@
             {:else if keystoreAliases.length > 0}
               <select id="alias-select" class="alias-select" bind:value={keystoreForm.alias}>
                 {#if keystoreAliases.length > 1}
-                  <option value="" disabled>Select an alias...</option>
+                  <option value="" disabled>{$tt('installer.select_alias')}</option>
                 {/if}
                 {#each keystoreAliases as alias}
                   <option value={alias}>{alias}</option>
                 {/each}
               </select>
             {:else}
-              <div class="alias-placeholder">Select keystore file &amp; enter store password first</div>
+              <div class="alias-placeholder">{$tt('installer.alias_hint')}</div>
             {/if}
           </div>
         </div>
@@ -309,7 +310,7 @@
             class:success={$installProgress.stage === 'complete'}
           >
             {#if $installProgress.stage === 'complete'}
-              &#10003; Installed successfully
+              &#10003; {$tt('installer.success')}
             {:else if $installProgress.stage === 'failed'}
               &#10007; {$installProgress.message}
             {:else}

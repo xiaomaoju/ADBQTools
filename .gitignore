@@ -20,5 +20,12 @@ src-tauri/resources/shared/bundletool.jar
 src-tauri/resources/macos/jre/
 src-tauri/resources/windows/jre/
 
-# Claude config
+# Claude / Superpowers
 .claude/
+docs/superpowers/
+
+# Rust build artifacts
+src-tauri/target/
+
+# Cargo lock (optional, uncomment to track)
+# src-tauri/Cargo.lock

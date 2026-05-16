@@ -1,6 +1,7 @@
 <script lang="ts">
   import { devices, activeDeviceSerial, onlineDevices } from '../stores/devices';
   import { disconnectDevice, restartAdb } from '../utils/tauri';
+  import { tt } from '../i18n';
   import type { Device } from '../types';
 
   export let onWifiClick: () => void = () => {};
@@ -34,7 +35,7 @@
 
 <div class="device-bar">
   <div class="bar-label">
-    <span class="label-text">Devices</span>
+    <span class="label-text">{$tt('devices.label')}</span>
     <span class="device-count">{$onlineDevices.length}</span>
   </div>
 
@@ -54,42 +55,47 @@
             class="chip-disconnect"
             role="button"
             tabindex="0"
-            title="Disconnect"
+            title={$tt('devices.disconnect')}
             on:click={(e) => handleDisconnect(e, device.serial)}
             on:keydown={(e) => { if (e.key === 'Enter') handleDisconnect(e, device.serial); }}
           >&times;</span>
         {/if}
       </button>
     {:else}
-      <span class="empty-hint">No devices</span>
+      <span class="empty-hint">{$tt('devices.none')}</span>
     {/each}
   </div>
 
-  <button class="wifi-btn" on:click={onWifiClick} title="WiFi Connect">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
-      <path d="M1.42 9a16 16 0 0 1 21.16 0"></path>
-      <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
-      <line x1="12" y1="20" x2="12.01" y2="20"></line>
-    </svg>
+  <button class="bar-btn wifi-btn" on:click={onWifiClick}>
+    <span class="has-tooltip">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
+        <path d="M1.42 9a16 16 0 0 1 21.16 0"></path>
+        <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+        <line x1="12" y1="20" x2="12.01" y2="20"></line>
+      </svg>
+      <span class="tooltip">{$tt('devices.wifi_connect')}</span>
+    </span>
   </button>
   <button
-    class="restart-btn"
+    class="bar-btn restart-btn"
     class:restarting
     disabled={restarting}
-    title="Restart ADB (kill-server + start-server)"
     on:click={async () => {
       restarting = true;
       try { await restartAdb(); } catch (e) { console.error('restart adb:', e); }
       restarting = false;
     }}
   >
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class:spin={restarting}>
-      <polyline points="23 4 23 10 17 10"></polyline>
-      <polyline points="1 20 1 14 7 14"></polyline>
-      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>
-      <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"></path>
-    </svg>
+    <span class="has-tooltip">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class:spin={restarting}>
+        <polyline points="23 4 23 10 17 10"></polyline>
+        <polyline points="1 20 1 14 7 14"></polyline>
+        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>
+        <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"></path>
+      </svg>
+      <span class="tooltip">{$tt('devices.restart_adb')}</span>
+    </span>
   </button>
 </div>
 
@@ -199,7 +205,7 @@
     opacity: 0.6;
     white-space: nowrap;
   }
-  .wifi-btn {
+  .bar-btn {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -218,20 +224,6 @@
     color: var(--accent);
     background: var(--bg-hover);
   }
-  .restart-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    background: none;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-sm);
-    color: var(--text-secondary);
-    cursor: pointer;
-    flex-shrink: 0;
-    transition: all 0.15s;
-  }
   .restart-btn:hover {
     border-color: var(--warning);
     color: var(--warning);
@@ -245,4 +237,47 @@
     animation: spin 0.8s linear infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Tooltip system */
+  .has-tooltip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+  }
+  .tooltip {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1a1a1a;
+    color: #e0e0e0;
+    font-family: var(--font-ui);
+    font-size: 11px;
+    font-weight: 400;
+    padding: 4px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    transition-delay: 0s;
+    z-index: 200;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    line-height: 1.3;
+  }
+  .tooltip::after {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 4px solid transparent;
+    border-bottom-color: #1a1a1a;
+  }
+  .has-tooltip:hover .tooltip {
+    opacity: 1;
+    transition-delay: 0.5s;
+  }
 </style>

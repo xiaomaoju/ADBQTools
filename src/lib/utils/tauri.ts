@@ -71,10 +71,19 @@ export function onDevicesChanged(callback: (devices: Device[]) => void): Promise
   return listen<Device[]>('devices-changed', (event) => callback(event.payload));
 }
 
-export function onLogcat(serial: string, callback: (entries: LogEntry[]) => void): Promise<UnlistenFn> {
-  return listen<LogEntry[]>(`logcat-${serial}`, (event) => callback(event.payload));
+export interface LogcatPayload {
+  serial: string;
+  entries: LogEntry[];
+}
+
+export function onLogcat(callback: (serial: string, entries: LogEntry[]) => void): Promise<UnlistenFn> {
+  return listen<LogcatPayload>('logcat-data', (event) => callback(event.payload.serial, event.payload.entries));
 }
 
 export function onInstallProgress(callback: (progress: InstallProgress) => void): Promise<UnlistenFn> {
   return listen<InstallProgress>('install-progress', (event) => callback(event.payload));
+}
+
+export function onLogcatError(callback: (message: string) => void): Promise<UnlistenFn> {
+  return listen<string>('logcat-error', (event) => callback(event.payload));
 }

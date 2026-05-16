@@ -50,6 +50,13 @@ pub async fn start_logcat(
     serial: String,
     app: tauri::AppHandle,
 ) -> Result<(), String> {
+    // Stop any existing session for this serial first
+    {
+        let mut sessions = state.logcat_sessions.lock().await;
+        if let Some(old_session) = sessions.remove(&serial) {
+            old_session.stop();
+        }
+    }
     let session = LogcatSession::new(serial.clone(), state.resources.adb_path());
     session.start(app).await;
     let mut sessions = state.logcat_sessions.lock().await;

@@ -117,8 +117,7 @@ function applyStructuredFilter(entries: LogEntry[], query: StructuredQuery): Log
       return entries;
     }
     case 'package':
-      // package filtering matches tag (process name often in tag)
-      return entries.filter(e => e.tag.toLowerCase().includes(val) || e.message.toLowerCase().includes(val));
+      return entries.filter(e => e.package_name.toLowerCase().includes(val));
     default:
       return entries;
   }

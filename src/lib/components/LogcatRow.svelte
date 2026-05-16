@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { LogEntry } from '../types';
+  import { columnWidths } from '../stores/columnWidths';
 
   export let entry: LogEntry;
   export let wrap: boolean = false;
@@ -25,13 +26,14 @@
   class:even
   class:is-error={entry.level === 'error' || entry.level === 'fatal'}
 >
-  <span class="col-timestamp">{entry.timestamp}</span>
-  <span class="col-pidtid">{entry.pid}-{entry.tid}</span>
-  <span class="col-tag" title={entry.tag}>{entry.tag}</span>
+  <span class="col-timestamp" style="width:{$columnWidths.timestamp}px">{entry.timestamp}</span>
+  <span class="col-pidtid" style="width:{$columnWidths.pidtid}px">{entry.pid}-{entry.tid}</span>
+  <span class="col-package" style="width:{$columnWidths.package_name}px" title={entry.package_name}>{entry.package_name}</span>
+  <span class="col-tag" style="width:{$columnWidths.tag}px" title={entry.tag}>{entry.tag}</span>
   {#if entry.source !== 'system'}
     <span class="col-source source-{entry.source}">{sourceIcon(entry.source)}</span>
   {/if}
-  <span class="col-level">
+  <span class="col-level" style="width:{$columnWidths.level}px">
     <span class="level-badge level-bg-{entry.level}">{levelLetters[entry.level]}</span>
   </span>
   <span class="col-message">{entry.message}</span>
@@ -66,34 +68,20 @@
     background: rgba(244, 71, 71, 0.12);
   }
 
-  /* Columns — fixed widths matching Android Studio proportions */
-  .col-timestamp {
-    color: var(--text-secondary);
-    min-width: 175px;
-    max-width: 175px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    flex-shrink: 0;
-    padding-right: 8px;
-  }
-  .col-pidtid {
-    color: var(--text-secondary);
-    min-width: 90px;
-    max-width: 90px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    flex-shrink: 0;
-    padding-right: 8px;
-  }
+  .col-timestamp,
+  .col-pidtid,
+  .col-package,
   .col-tag {
-    min-width: 140px;
-    max-width: 180px;
     overflow: hidden;
     text-overflow: ellipsis;
     flex-shrink: 0;
-    font-weight: 600;
     padding-right: 8px;
+    box-sizing: border-box;
   }
+  .col-timestamp { color: var(--text-secondary); }
+  .col-pidtid    { color: var(--text-secondary); }
+  .col-package   { color: var(--text-secondary); }
+  .col-tag       { font-weight: 600; }
   /* Tag colors per level (Android Studio style) */
   .level-verbose .col-tag { color: #888; }
   .level-debug .col-tag   { color: #4fc1ff; }
@@ -130,12 +118,11 @@
   /* Level badge — colored pill like Android Studio */
   .col-level {
     flex-shrink: 0;
-    min-width: 22px;
-    max-width: 22px;
     display: flex;
     align-items: center;
     justify-content: center;
     margin-right: 8px;
+    box-sizing: border-box;
   }
   .level-badge {
     display: inline-flex;

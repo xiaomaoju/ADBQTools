@@ -1,7 +1,7 @@
 [package]
-name = "androidqtools"
+name = "adbqtools"
 version = "0.1.0"
-description = "AndroidQTools — Android developer utility with Logcat viewer, APK installer, and device management"
+description = "ADBQTools — Android developer utility with Logcat viewer, APK installer, and device management"
 authors = ["you"]
 edition = "2021"
 

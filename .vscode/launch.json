@@ -8,7 +8,7 @@
       "cargo": {
         "args": ["build", "--manifest-path=src-tauri/Cargo.toml"]
       },
-      "program": "${workspaceFolder}/src-tauri/target/debug/androidqtools",
+      "program": "${workspaceFolder}/src-tauri/target/debug/adbqtools",
       "cwd": "${workspaceFolder}/src-tauri",
       "env": {
         "RUST_LOG": "info",
@@ -21,7 +21,7 @@
       "name": "Tauri: Attach to Running",
       "type": "lldb",
       "request": "attach",
-      "program": "${workspaceFolder}/src-tauri/target/debug/androidqtools",
+      "program": "${workspaceFolder}/src-tauri/target/debug/adbqtools",
       "sourceLanguages": ["rust"]
     },
     {

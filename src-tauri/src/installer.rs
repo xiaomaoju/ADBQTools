@@ -112,7 +112,7 @@ pub async fn install_aab(
     });
 
     let tmp_dir = std::env::temp_dir();
-    let apks_path = tmp_dir.join("androidqtools_temp.apks");
+    let apks_path = tmp_dir.join("adbqtools_temp.apks");
     if apks_path.exists() {
         std::fs::remove_file(&apks_path).ok();
     }

@@ -3,6 +3,8 @@
   import { onMount, onDestroy } from 'svelte';
   import DevicePanel from './lib/components/DevicePanel.svelte';
   import WifiDialog from './lib/components/WifiDialog.svelte';
+  import SettingsDialog from './lib/components/SettingsDialog.svelte';
+  import TutorialDialog from './lib/components/TutorialDialog.svelte';
   import Toolbar from './lib/components/Toolbar.svelte';
   import LogcatViewer from './lib/components/LogcatViewer.svelte';
   import Installer from './lib/components/Installer.svelte';
@@ -14,6 +16,8 @@
 
   let currentView: ViewMode = 'logcat';
   let showWifiDialog = false;
+  let showSettingsDialog = false;
+  let showTutorialDialog = false;
   let unlisten: UnlistenFn | null = null;
 
   onMount(async () => {
@@ -46,7 +50,7 @@
 <main class="app-shell">
   <div class="topbar">
     <DevicePanel onWifiClick={() => showWifiDialog = true} />
-    <Toolbar bind:currentView />
+    <Toolbar bind:currentView onSettingsClick={() => showSettingsDialog = true} />
   </div>
   <div class="main-area">
     {#if currentView === 'logcat'}
@@ -61,6 +65,8 @@
 </main>
 
 <WifiDialog bind:open={showWifiDialog} />
+<SettingsDialog bind:open={showSettingsDialog} onTutorialClick={() => showTutorialDialog = true} />
+<TutorialDialog bind:open={showTutorialDialog} />
 
 <style>
   .app-shell {
