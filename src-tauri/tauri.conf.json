@@ -32,8 +32,8 @@
       "icons/icon.ico"
     ],
     "resources": {
-      "resources/macos/*": "resources/macos/",
-      "resources/windows/*": "resources/windows/",
+      "resources/macos/**": "resources/macos/",
+      "resources/windows/**": "resources/windows/",
       "resources/shared/*": "resources/shared/"
     }
   }
