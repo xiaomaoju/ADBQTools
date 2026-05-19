@@ -34,11 +34,17 @@ fn main() {
 
             std::fs::create_dir_all(&data_dir).ok();
 
-            // Dev mode: resource_dir points to target/debug/, fall back to src-tauri/resources/
             if cfg!(debug_assertions) {
+                // Dev mode: resource_dir points to target/debug/, fall back to src-tauri/resources/
                 let dev_resources = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources");
                 if dev_resources.exists() {
                     resource_dir = dev_resources;
+                }
+            } else {
+                // Release mode: Tauri bundles resources under Resources/resources/
+                let release_resources = resource_dir.join("resources");
+                if release_resources.exists() {
+                    resource_dir = release_resources;
                 }
             }
 
