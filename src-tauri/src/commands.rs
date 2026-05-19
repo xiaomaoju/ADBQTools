@@ -162,3 +162,11 @@ pub async fn install_aab(
         &app,
     ).await
 }
+
+#[tauri::command]
+pub async fn parse_package(
+    state: State<'_, AppState>,
+    path: String,
+) -> Result<crate::package_parser::PackageInfo, String> {
+    crate::package_parser::parse_package(&state.resources, &path).await
+}

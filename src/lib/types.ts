@@ -60,6 +60,40 @@ export interface InstallRecord {
   error?: string;
 }
 
+export interface SigningInfo {
+  owner: string;
+  issuer: string;
+  serial_number: string;
+  valid_from: string;
+  valid_to: string;
+  sha256: string;
+  sha1: string;
+  md5: string;
+  algorithm: string;
+}
+
+export interface PackageInfo {
+  file_name: string;
+  file_size: number;
+  file_type: string;
+  package_name: string;
+  version_name: string;
+  version_code: string;
+  min_sdk: string;
+  target_sdk: string;
+  compile_sdk: string;
+  debuggable: boolean;
+  allow_backup: boolean;
+  permissions: string[];
+  architectures: string[];
+  native_libs: Record<string, string[]>;
+  dex_count: number;
+  has_assets: boolean;
+  has_resources: boolean;
+  total_uncompressed_size: number;
+  signing_info: SigningInfo | null;
+}
+
 export type ViewMode = 'logcat' | 'installer';
 
 export interface FilterPreset {

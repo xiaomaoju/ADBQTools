@@ -1,14 +1,15 @@
 <script lang="ts">
   import AppPreview from './AppPreview.svelte';
   import InstallHistory from './InstallHistory.svelte';
+  import PackageInfoDialog from './PackageInfoDialog.svelte';
   import Button from './ui/Button.svelte';
   import Input from './ui/Input.svelte';
   import ProgressBar from './ui/ProgressBar.svelte';
   import { activeDevice, activeDeviceSerial } from '../stores/devices';
   import { installProgress, addInstallRecord, savedKeystore } from '../stores/installer';
-  import { installApk, installAab, onInstallProgress, listKeystoreAliases } from '../utils/tauri';
+  import { installApk, installAab, onInstallProgress, listKeystoreAliases, parsePackage } from '../utils/tauri';
   import { open } from '@tauri-apps/plugin-dialog';
-  import type { KeystoreConfig } from '../types';
+  import type { KeystoreConfig, PackageInfo } from '../types';
   import { onMount, onDestroy } from 'svelte';
   import { getCurrentWebview } from '@tauri-apps/api/webview';
   import { tt } from '../i18n';
@@ -27,6 +28,11 @@
     store_password: '',
     key_password: '',
   };
+
+  let showPackageInfo = false;
+  let packageInfo: PackageInfo | null = null;
+  let packageInfoError = '';
+  let packageInfoLoading = false;
 
   let keystoreAliases: string[] = [];
   let loadingAliases = false;
@@ -146,6 +152,21 @@
     $installProgress = null;
   }
 
+  async function handleParsePackage() {
+    if (!selectedFile) return;
+    showPackageInfo = true;
+    packageInfoLoading = true;
+    packageInfoError = '';
+    packageInfo = null;
+    try {
+      packageInfo = await parsePackage(selectedFile.path);
+    } catch (e) {
+      packageInfoError = String(e);
+    } finally {
+      packageInfoLoading = false;
+    }
+  }
+
   async function handleInstall() {
     if (!selectedFile || !$activeDeviceSerial) return;
     installing = true;
@@ -225,17 +246,34 @@
           </button>
         {/if}
       </div>
-      <Button
-        variant="primary"
-        disabled={!selectedFile || !$activeDeviceSerial || installing}
-        on:click={handleInstall}
-      >
+      <div class="action-right">
+        <Button
+          variant="secondary"
+          disabled={!selectedFile || packageInfoLoading}
+          on:click={handleParsePackage}
+        >
+          {#if packageInfoLoading}
+            <span class="spinner"></span>
+          {:else}
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+          {/if}
+          {$tt('installer.package_info')}
+        </Button>
+        <Button
+          variant="primary"
+          disabled={!selectedFile || !$activeDeviceSerial || installing}
+          on:click={handleInstall}
+        >
         {#if installing}
           <span class="spinner"></span> {$tt('installer.installing')}
         {:else}
           {$tt('installer.install')}
         {/if}
       </Button>
+      </div>
     </div>
 
     <!-- Keystore Config Panel -->
@@ -326,6 +364,8 @@
     <InstallHistory />
   </div>
 </div>
+
+<PackageInfoDialog bind:open={showPackageInfo} info={packageInfo} error={packageInfoError} loading={packageInfoLoading} />
 
 <style>
   .installer {
@@ -471,7 +511,7 @@
     align-items: center;
     justify-content: space-between;
   }
-  .action-left {
+  .action-left, .action-right {
     display: flex;
     align-items: center;
     gap: 8px;

@@ -6,6 +6,7 @@ mod device_manager;
 mod embedded;
 mod installer;
 mod logcat_engine;
+mod package_parser;
 mod unity_parser;
 
 use commands::AppState;
@@ -83,6 +84,7 @@ fn main() {
             commands::list_keystore_aliases,
             commands::install_apk,
             commands::install_aab,
+            commands::parse_package,
         ])
         .run(tauri::generate_context!())
         .expect("error running tauri application");

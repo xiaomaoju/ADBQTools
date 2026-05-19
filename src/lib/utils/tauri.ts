@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
-import type { Device, LogEntry, InstallProgress, KeystoreConfig } from '../types';
+import type { Device, LogEntry, InstallProgress, KeystoreConfig, PackageInfo } from '../types';
 
 export async function getDevices(): Promise<Device[]> {
   return invoke('get_devices');
@@ -86,4 +86,8 @@ export function onInstallProgress(callback: (progress: InstallProgress) => void)
 
 export function onLogcatError(callback: (message: string) => void): Promise<UnlistenFn> {
   return listen<string>('logcat-error', (event) => callback(event.payload));
+}
+
+export async function parsePackage(path: string): Promise<PackageInfo> {
+  return invoke('parse_package', { path });
 }
