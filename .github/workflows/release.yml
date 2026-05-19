@@ -84,6 +84,6 @@ jobs:
             |----------|------|
             | macOS (Apple Silicon) | `.dmg` |
             | Windows | `.msi` / `.exe` |
-          releaseDraft: true
+          releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
