@@ -71,9 +71,11 @@ pub async fn parse_package(
     let signing_info = parse_signing_info(resources, file_path).await.ok();
 
     let manifest_info = if ext == "apk" {
-        parse_apk_manifest(path)?
+        parse_apk_manifest(path).unwrap_or_default()
     } else {
-        parse_aab_manifest(resources, file_path).await?
+        parse_aab_manifest(resources, file_path)
+            .await
+            .unwrap_or_default()
     };
 
     Ok(PackageInfo {
@@ -99,6 +101,7 @@ pub async fn parse_package(
     })
 }
 
+#[derive(Default)]
 struct ManifestInfo {
     package_name: String,
     version_name: String,
