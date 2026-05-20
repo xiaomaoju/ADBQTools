@@ -55,6 +55,11 @@ impl EmbeddedResources {
         }
     }
 
+    pub fn jre_zip_path(&self) -> PathBuf {
+        self.resource_dir.join(platform_subdir()).join("jre.zip")
+    }
+
+    /// Legacy: check if JRE was bundled as a directory (dev mode)
     pub fn jre_source_dir(&self) -> PathBuf {
         self.resource_dir.join(platform_subdir()).join("jre")
     }
@@ -68,12 +73,58 @@ impl EmbeddedResources {
         if target.exists() {
             return Ok(());
         }
-        let source = self.jre_source_dir();
-        if !source.exists() {
-            return Err(format!("JRE source not found at {:?}", source));
+
+        // Try zip first (release builds), then directory copy (dev mode)
+        let zip_path = self.jre_zip_path();
+        if zip_path.exists() {
+            return Self::extract_jre_zip(&zip_path, &self.data_dir);
         }
-        copy_dir_recursive(&source, &target)
-            .map_err(|e| format!("Failed to extract JRE: {}", e))
+
+        let source = self.jre_source_dir();
+        if source.exists() {
+            return copy_dir_recursive(&source, &target)
+                .map_err(|e| format!("Failed to copy JRE: {}", e));
+        }
+
+        Err(format!("JRE not found: tried {:?} and {:?}", zip_path, source))
+    }
+
+    fn extract_jre_zip(zip_path: &PathBuf, data_dir: &PathBuf) -> Result<(), String> {
+        let file = fs::File::open(zip_path)
+            .map_err(|e| format!("Cannot open jre.zip: {}", e))?;
+        let mut archive = zip::ZipArchive::new(file)
+            .map_err(|e| format!("Cannot read jre.zip: {}", e))?;
+
+        for i in 0..archive.len() {
+            let mut entry = archive.by_index(i)
+                .map_err(|e| format!("Zip entry error: {}", e))?;
+            let out_path = data_dir.join(entry.mangled_name());
+
+            if entry.is_dir() {
+                fs::create_dir_all(&out_path)
+                    .map_err(|e| format!("mkdir failed: {}", e))?;
+            } else {
+                if let Some(parent) = out_path.parent() {
+                    fs::create_dir_all(parent)
+                        .map_err(|e| format!("mkdir failed: {}", e))?;
+                }
+                let mut outfile = fs::File::create(&out_path)
+                    .map_err(|e| format!("Create file failed: {}", e))?;
+                std::io::copy(&mut entry, &mut outfile)
+                    .map_err(|e| format!("Write file failed: {}", e))?;
+
+                // Preserve executable permissions on Unix
+                #[cfg(unix)]
+                {
+                    use std::os::unix::fs::PermissionsExt;
+                    if let Some(mode) = entry.unix_mode() {
+                        fs::set_permissions(&out_path, fs::Permissions::from_mode(mode)).ok();
+                    }
+                }
+            }
+        }
+
+        Ok(())
     }
 
     #[cfg(unix)]

@@ -64,34 +64,39 @@ elif [[ "$PLATFORM" == "windows" ]]; then
 fi
 
 # --- JRE (Eclipse Temurin, platform-specific) ---
+# JRE is packaged as jre.zip and extracted at runtime to avoid Tauri glob issues
 if [[ "$PLATFORM" == "macos" ]]; then
-  JRE_DIR="$RESOURCE_DIR/macos/jre"
-  if [[ ! -d "$JRE_DIR" ]]; then
+  JRE_ZIP="$RESOURCE_DIR/macos/jre.zip"
+  if [[ ! -f "$JRE_ZIP" ]]; then
     echo "[3/3] Downloading JRE $JRE_VERSION (macOS aarch64)..."
     curl -fSL -o /tmp/jre.tar.gz \
       "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-${JRE_VERSION_URL}/OpenJDK21U-jre_aarch64_mac_hotspot_${JRE_VERSION/+/_}.tar.gz"
-    mkdir -p "$JRE_DIR"
+    mkdir -p /tmp/jre_stage
     tar xzf /tmp/jre.tar.gz -C /tmp
-    # Temurin extracts to jdk-xxx-jre/ — copy the Contents dir
-    cp -R /tmp/jdk-*/Contents "$JRE_DIR/"
-    chmod +x "$JRE_DIR/Contents/Home/bin/java" "$JRE_DIR/Contents/Home/bin/keytool"
-    rm -rf /tmp/jre.tar.gz /tmp/jdk-*
+    # Temurin extracts to jdk-xxx-jre/ — we want the Contents dir
+    mkdir -p /tmp/jre_stage/jre
+    cp -R /tmp/jdk-*/Contents /tmp/jre_stage/jre/
+    chmod +x /tmp/jre_stage/jre/Contents/Home/bin/java /tmp/jre_stage/jre/Contents/Home/bin/keytool
+    # Create zip with jre/ as root directory
+    (cd /tmp/jre_stage && zip -qr "$OLDPWD/$JRE_ZIP" jre/)
+    rm -rf /tmp/jre.tar.gz /tmp/jdk-* /tmp/jre_stage
   else
-    echo "[3/3] JRE already exists, skipping."
+    echo "[3/3] JRE zip already exists, skipping."
   fi
 elif [[ "$PLATFORM" == "windows" ]]; then
-  JRE_DIR="$RESOURCE_DIR/windows/jre"
-  if [[ ! -d "$JRE_DIR" ]]; then
+  JRE_ZIP="$RESOURCE_DIR/windows/jre.zip"
+  if [[ ! -f "$JRE_ZIP" ]]; then
     echo "[3/3] Downloading JRE $JRE_VERSION (Windows x64)..."
     curl -fSL -o /tmp/jre.zip \
       "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-${JRE_VERSION_URL}/OpenJDK21U-jre_x64_windows_hotspot_${JRE_VERSION/+/_}.zip"
     unzip -q -o /tmp/jre.zip -d /tmp
-    # Temurin extracts to jdk-xxx-jre/ — move contents into jre/
-    mkdir -p "$JRE_DIR"
-    cp -R /tmp/jdk-*/* "$JRE_DIR/"
-    rm -rf /tmp/jre.zip /tmp/jdk-*
+    # Temurin extracts to jdk-xxx-jre/ — repackage with jre/ as root
+    mkdir -p /tmp/jre_stage
+    mv /tmp/jdk-*/ /tmp/jre_stage/jre
+    (cd /tmp/jre_stage && zip -qr "$OLDPWD/$JRE_ZIP" jre/)
+    rm -rf /tmp/jre.zip /tmp/jre_stage
   else
-    echo "[3/3] JRE already exists, skipping."
+    echo "[3/3] JRE zip already exists, skipping."
   fi
 fi
 
