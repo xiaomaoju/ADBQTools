@@ -93,7 +93,12 @@ elif [[ "$PLATFORM" == "windows" ]]; then
     # Temurin extracts to jdk-xxx-jre/ — repackage with jre/ as root
     mkdir -p /tmp/jre_stage
     mv /tmp/jdk-*/ /tmp/jre_stage/jre
-    (cd /tmp/jre_stage && zip -qr "$OLDPWD/$JRE_ZIP" jre/)
+    # Use 7z on Windows (no zip command), fall back to zip on other platforms
+    if command -v 7z &>/dev/null; then
+      (cd /tmp/jre_stage && 7z a -tzip -bso0 -bsp0 "$OLDPWD/$JRE_ZIP" jre/)
+    else
+      (cd /tmp/jre_stage && zip -qr "$OLDPWD/$JRE_ZIP" jre/)
+    fi
     rm -rf /tmp/jre.zip /tmp/jre_stage
   else
     echo "[3/3] JRE zip already exists, skipping."
