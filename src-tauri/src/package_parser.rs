@@ -315,10 +315,13 @@ async fn parse_aab_manifest(
     let java_path = resources.jre_java_path();
     let bundletool_path = resources.bundletool_path();
 
+    // On Windows, Java may fail with non-ASCII paths — use safe copy
+    let effective_jar = crate::installer::safe_jar_path(&bundletool_path)?;
+
     let output = Command::new(&java_path)
         .args([
             "-jar",
-            &bundletool_path.to_string_lossy(),
+            &effective_jar.to_string_lossy(),
             "dump",
             "manifest",
             &format!("--bundle={}", aab_path),

@@ -18,6 +18,19 @@ pub struct InstallProgress {
     pub message: String,
 }
 
+/// On Windows, Java cannot load jar files from paths containing non-ASCII characters.
+/// If the path is non-ASCII, copy the jar to a temp directory with a safe path.
+pub fn safe_jar_path(original: &PathBuf) -> Result<PathBuf, String> {
+    let path_str = original.to_string_lossy();
+    if path_str.is_ascii() {
+        return Ok(original.clone());
+    }
+    let tmp = std::env::temp_dir().join("adbqtools_bundletool.jar");
+    std::fs::copy(original, &tmp)
+        .map_err(|e| format!("Failed to copy bundletool.jar to temp: {}", e))?;
+    Ok(tmp)
+}
+
 pub async fn list_keystore_aliases(
     resources: &EmbeddedResources,
     keystore_path: &str,
@@ -129,9 +142,13 @@ pub async fn install_aab(
         return Err(format!("bundletool.jar not found at: {:?}", bundletool_path));
     }
 
+    // On Windows, Java may fail to load jars from paths with non-ASCII characters.
+    // Copy bundletool.jar to a temp dir with a safe ASCII path.
+    let effective_jar = safe_jar_path(&bundletool_path)?;
+
     let mut args = vec![
         "-jar".to_string(),
-        bundletool_path.to_string_lossy().to_string(),
+        effective_jar.to_string_lossy().to_string(),
         "build-apks".to_string(),
         format!("--bundle={}", aab_path),
         format!("--output={}", apks_path.to_string_lossy()),
@@ -172,7 +189,7 @@ pub async fn install_aab(
     let install_output = Command::new(&java_path)
         .args([
             "-jar",
-            &bundletool_path.to_string_lossy(),
+            &effective_jar.to_string_lossy(),
             "install-apks",
             &format!("--apks={}", apks_path.to_string_lossy()),
             &format!("--adb={}", adb_path.to_string_lossy()),
