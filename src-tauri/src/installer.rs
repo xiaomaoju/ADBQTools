@@ -121,6 +121,14 @@ pub async fn install_aab(
     let bundletool_path = resources.bundletool_path();
     let adb_path = resources.adb_path();
 
+    // Validate paths exist before invoking
+    if !java_path.exists() {
+        return Err(format!("java not found at: {:?}", java_path));
+    }
+    if !bundletool_path.exists() {
+        return Err(format!("bundletool.jar not found at: {:?}", bundletool_path));
+    }
+
     let mut args = vec![
         "-jar".to_string(),
         bundletool_path.to_string_lossy().to_string(),
@@ -147,11 +155,13 @@ pub async fn install_aab(
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+        let error_msg = if stderr.trim().is_empty() { stdout } else { stderr };
         let _ = app.emit("install-progress", InstallProgress {
             stage: "failed".to_string(),
-            message: format!("Build APKs failed: {}", stderr),
+            message: format!("Build APKs failed: {}", error_msg),
         });
-        return Err(stderr);
+        return Err(format!("bundletool build-apks failed (java={:?}, jar={:?}): {}", java_path, bundletool_path, error_msg));
     }
 
     let _ = app.emit("install-progress", InstallProgress {
