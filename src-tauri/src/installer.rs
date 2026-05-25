@@ -18,18 +18,16 @@ pub struct InstallProgress {
     pub message: String,
 }
 
-/// On Windows, Java cannot load jar files from paths containing non-ASCII characters.
-/// If the path is non-ASCII, copy the jar to a temp directory with a safe path.
+/// Copy bundletool.jar to temp dir to avoid any path encoding issues on Windows.
+/// Java on Windows can fail to load jars from paths with spaces or non-ASCII characters.
 pub fn safe_jar_path(original: &PathBuf) -> Result<PathBuf, String> {
-    let path_str = original.to_string_lossy();
-    if path_str.is_ascii() {
-        return Ok(original.clone());
-    }
     let tmp = std::env::temp_dir().join("adbqtools_bundletool.jar");
     std::fs::copy(original, &tmp)
         .map_err(|e| format!("Failed to copy bundletool.jar to temp: {}", e))?;
     Ok(tmp)
 }
+
+pub const BUNDLETOOL_MAIN: &str = "com.android.tools.build.bundletool.BundleToolMain";
 
 pub async fn list_keystore_aliases(
     resources: &EmbeddedResources,
@@ -147,8 +145,9 @@ pub async fn install_aab(
     let effective_jar = safe_jar_path(&bundletool_path)?;
 
     let mut args = vec![
-        "-jar".to_string(),
+        "-cp".to_string(),
         effective_jar.to_string_lossy().to_string(),
+        BUNDLETOOL_MAIN.to_string(),
         "build-apks".to_string(),
         format!("--bundle={}", aab_path),
         format!("--output={}", apks_path.to_string_lossy()),
@@ -174,11 +173,12 @@ pub async fn install_aab(
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
         let stdout = String::from_utf8_lossy(&output.stdout).to_string();
         let error_msg = if stderr.trim().is_empty() { stdout } else { stderr };
+        let detail = format!("Build APKs failed:\njava: {}\njar: {}\n{}", java_path.display(), effective_jar.display(), error_msg);
         let _ = app.emit("install-progress", InstallProgress {
             stage: "failed".to_string(),
-            message: format!("Build APKs failed: {}", error_msg),
+            message: detail.clone(),
         });
-        return Err(format!("bundletool build-apks failed (java={:?}, jar={:?}): {}", java_path, bundletool_path, error_msg));
+        return Err(detail);
     }
 
     let _ = app.emit("install-progress", InstallProgress {
@@ -188,8 +188,9 @@ pub async fn install_aab(
 
     let install_output = Command::new(&java_path)
         .args([
-            "-jar",
+            "-cp",
             &effective_jar.to_string_lossy(),
+            BUNDLETOOL_MAIN,
             "install-apks",
             &format!("--apks={}", apks_path.to_string_lossy()),
             &format!("--adb={}", adb_path.to_string_lossy()),

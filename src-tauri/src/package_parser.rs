@@ -320,8 +320,9 @@ async fn parse_aab_manifest(
 
     let output = Command::new(&java_path)
         .args([
-            "-jar",
+            "-cp",
             &effective_jar.to_string_lossy(),
+            crate::installer::BUNDLETOOL_MAIN,
             "dump",
             "manifest",
             &format!("--bundle={}", aab_path),
