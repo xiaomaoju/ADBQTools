@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use tokio::process::Command;
 use tauri::{AppHandle, Emitter};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -105,7 +104,7 @@ impl DeviceManager {
     }
 
     pub async fn poll_devices(&self) -> Result<Vec<Device>, String> {
-        let output = Command::new(&self.adb_path)
+        let output = crate::util::create_command(&self.adb_path)
             .args(["devices", "-l"])
             .output()
             .await
@@ -120,7 +119,7 @@ impl DeviceManager {
         let adb_path = self.adb_path.clone();
         tokio::spawn(async move {
             loop {
-                let output = Command::new(&adb_path)
+                let output = crate::util::create_command(&adb_path)
                     .args(["devices", "-l"])
                     .output()
                     .await;
@@ -152,7 +151,7 @@ impl DeviceManager {
 pub async fn start_polling_shared(adb_path: PathBuf, devices: DeviceMap, app: AppHandle) {
     tokio::spawn(async move {
         loop {
-            let output = Command::new(&adb_path)
+            let output = crate::util::create_command(&adb_path)
                 .args(["devices", "-l"])
                 .output()
                 .await;
@@ -216,7 +215,7 @@ impl DeviceManager {
 
 /// Run an adb command with a timeout in seconds. Kills the process if it exceeds the limit.
 async fn run_with_timeout(adb_path: &PathBuf, args: &[&str], timeout_secs: u64) -> Result<std::process::Output, String> {
-    let child = Command::new(adb_path)
+    let child = crate::util::create_command(adb_path)
         .args(args)
         .kill_on_drop(true)
         .output();

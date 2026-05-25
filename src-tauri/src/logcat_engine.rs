@@ -7,7 +7,6 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use tokio::sync::Mutex;
 use tokio::io::{AsyncBufReadExt, BufReader, AsyncReadExt};
-use tokio::process::Command;
 use tauri::{AppHandle, Emitter};
 use crate::unity_parser;
 
@@ -128,7 +127,7 @@ impl PidResolver {
     }
 
     pub async fn refresh(&self) {
-        let output = Command::new(&self.adb_path)
+        let output = crate::util::create_command(&self.adb_path)
             .args(["-s", &self.serial, "shell", "ps", "-A", "-o", "PID,NAME"])
             .output()
             .await;
@@ -218,7 +217,7 @@ impl LogcatSession {
         tokio::spawn(async move {
             let _ = app.emit("logcat-error", format!("[{}] Starting: adb -s {} logcat -v threadtime", serial, serial));
 
-            let mut child = match Command::new(&adb_path)
+            let mut child = match crate::util::create_command(&adb_path)
                 .args(["-s", &serial, "logcat", "-v", "threadtime"])
                 .stdout(std::process::Stdio::piped())
                 .stderr(std::process::Stdio::piped())
@@ -316,7 +315,7 @@ impl LogcatSession {
                             retried = true;
                             let _ = app.emit("logcat-error", format!("[{}] No data after 8s, retrying...", serial));
                             let _ = child.kill().await;
-                            match Command::new(&adb_path)
+                            match crate::util::create_command(&adb_path)
                                 .args(["-s", &serial, "logcat", "-v", "threadtime"])
                                 .stdout(std::process::Stdio::piped())
                                 .stderr(std::process::Stdio::null())
@@ -368,7 +367,7 @@ impl LogcatSession {
     }
 
     pub async fn clear_logcat(&self) -> Result<(), String> {
-        Command::new(&self.adb_path)
+        crate::util::create_command(&self.adb_path)
             .args(["-s", &self.serial, "logcat", "-c"])
             .output()
             .await

@@ -6,3 +6,4 @@ pub mod installer;
 pub mod logcat_engine;
 pub mod package_parser;
 pub mod unity_parser;
+pub mod util;

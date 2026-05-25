@@ -8,6 +8,7 @@ mod installer;
 mod logcat_engine;
 mod package_parser;
 mod unity_parser;
+mod util;
 
 use commands::AppState;
 use std::collections::HashMap;

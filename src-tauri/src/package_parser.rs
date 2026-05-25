@@ -2,7 +2,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io::Read;
 use std::path::Path;
-use tokio::process::Command;
 
 use crate::embedded::EmbeddedResources;
 
@@ -318,7 +317,7 @@ async fn parse_aab_manifest(
     // On Windows, Java may fail with non-ASCII paths — use safe copy
     let effective_jar = crate::installer::safe_jar_path(&bundletool_path)?;
 
-    let output = Command::new(&java_path)
+    let output = crate::util::create_command(&java_path)
         .args([
             "-cp",
             &effective_jar.to_string_lossy(),
@@ -466,7 +465,7 @@ async fn parse_signing_info(
     }
 
     // Try 1: keytool -printcert -jarfile (works for v1/JAR signing)
-    let output = Command::new(&keytool)
+    let output = crate::util::create_command(&keytool)
         .args(["-printcert", "-jarfile", file_path])
         .output()
         .await
@@ -615,7 +614,7 @@ async fn try_extract_cert_and_read(
             .map_err(|e| format!("Cannot write temp cert: {}", e))?;
     }
 
-    let output = Command::new(keytool)
+    let output = crate::util::create_command(keytool)
         .args(["-printcert", "-file", &tmp_cert.to_string_lossy()])
         .output()
         .await
@@ -664,7 +663,7 @@ async fn try_extract_v2_cert_and_read(
             .map_err(|e| format!("Cannot write temp cert: {}", e))?;
     }
 
-    let output = Command::new(keytool)
+    let output = crate::util::create_command(keytool)
         .args(["-printcert", "-file", &tmp_cert.to_string_lossy()])
         .output()
         .await

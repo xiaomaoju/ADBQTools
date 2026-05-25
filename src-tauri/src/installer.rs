@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use tokio::process::Command;
 use tauri::{AppHandle, Emitter};
 use crate::embedded::EmbeddedResources;
 
@@ -39,7 +38,7 @@ pub async fn list_keystore_aliases(
         return Err("keytool not found in embedded JRE".to_string());
     }
 
-    let output = Command::new(&keytool)
+    let output = crate::util::create_command(&keytool)
         .args([
             "-list",
             "-keystore", keystore_path,
@@ -86,7 +85,7 @@ pub async fn install_apk(
         message: "Installing APK...".to_string(),
     });
 
-    let output = Command::new(adb_path)
+    let output = crate::util::create_command(adb_path)
         .args(["-s", serial, "install", "-r", "-d", apk_path])
         .output()
         .await
@@ -163,7 +162,7 @@ pub async fn install_aab(
         args.push(format!("--key-pass=pass:{}", ks.key_password));
     }
 
-    let output = Command::new(&java_path)
+    let output = crate::util::create_command(&java_path)
         .args(&args)
         .output()
         .await
@@ -186,7 +185,7 @@ pub async fn install_aab(
         message: "Installing APKs to device...".to_string(),
     });
 
-    let install_output = Command::new(&java_path)
+    let install_output = crate::util::create_command(&java_path)
         .args([
             "-cp",
             &effective_jar.to_string_lossy(),
